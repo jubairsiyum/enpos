@@ -57,8 +57,11 @@ Route::prefix('v1')->group(function () {
             // Locations
             Route::apiResource('locations', \App\Http\Controllers\Shop\LocationController::class);
 
-            // Users
+            // Users & Roles (User Management)
             Route::apiResource('users', \App\Http\Controllers\Shop\UserController::class);
+            Route::get('roles/permissions', [\App\Http\Controllers\Shop\RoleController::class, 'permissions']);
+            Route::apiResource('roles', \App\Http\Controllers\Shop\RoleController::class);
+            Route::apiResource('sales-commission-agents', \App\Http\Controllers\Shop\SalesCommissionAgentController::class);
 
             // Contacts
             Route::apiResource('contacts', \App\Http\Controllers\Shop\ContactController::class);

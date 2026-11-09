@@ -45,33 +45,18 @@ class PermissionSeeder extends Seeder
         // ----------------------------------------------------------------
         // Shop-level permissions (scoped to a business_id team)
         // ----------------------------------------------------------------
+        $shopGroups = config('shop_permissions.groups', []);
         $shopPerms = [
-            // Dashboard
             'shop.dashboard.view',
-            // Users
-            'shop.users.view', 'shop.users.create', 'shop.users.edit', 'shop.users.delete',
-            // Contacts
-            'shop.contacts.view', 'shop.contacts.create', 'shop.contacts.edit', 'shop.contacts.delete',
-            // Products
-            'shop.products.view', 'shop.products.create', 'shop.products.edit', 'shop.products.delete',
-            // Purchases
-            'shop.purchases.view', 'shop.purchases.create', 'shop.purchases.edit', 'shop.purchases.delete',
-            // Sell
-            'shop.sell.view', 'shop.sell.create', 'shop.sell.edit', 'shop.sell.delete',
-            // POS
             'shop.pos.access',
-            // Stock
-            'shop.stock_transfers.view', 'shop.stock_transfers.create',
-            'shop.stock_adjustment.view', 'shop.stock_adjustment.create',
-            // Expenses
-            'shop.expenses.view', 'shop.expenses.create', 'shop.expenses.edit', 'shop.expenses.delete',
-            // Accounts
-            'shop.accounts.view', 'shop.accounts.create',
-            // Reports
-            'shop.reports.view',
-            // Settings
-            'shop.settings.view', 'shop.settings.edit',
         ];
+
+        foreach ($shopGroups as $groupPerms) {
+            foreach (array_keys($groupPerms) as $permKey) {
+                $shopPerms[] = $permKey;
+            }
+        }
+        $shopPerms = array_unique($shopPerms);
 
         foreach ($shopPerms as $perm) {
             Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);

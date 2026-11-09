@@ -24,6 +24,10 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'username',
+        'prefix',
+        'first_name',
+        'last_name',
         'password',
         'type',          // super_admin | admin | owner | staff
         'business_id',   // NULL for platform users
@@ -36,9 +40,32 @@ class User extends Authenticatable
         'commission_type',   // fixed | percentage | NULL
         'commission_rate',
         'max_sales_discount',
+        'is_cmmsn_agent',
+        'access_locations',
         'allow_login',
         'selected_contacts',  // JSON: pinned contacts in POS
         'crm_contact_id',
+        'dob',
+        'gender',
+        'marital_status',
+        'blood_group',
+        'alt_number',
+        'family_number',
+        'fb_link',
+        'twitter_link',
+        'social_media_1',
+        'social_media_2',
+        'custom_field_1',
+        'custom_field_2',
+        'custom_field_3',
+        'custom_field_4',
+        'guardian_name',
+        'id_proof_name',
+        'id_proof_number',
+        'permanent_address',
+        'current_address',
+        'bank_details',
+        'hrm_details',
     ];
 
     protected $hidden = [
@@ -52,7 +79,12 @@ class User extends Authenticatable
         'is_active'         => 'boolean',
         'dark_mode'         => 'boolean',
         'allow_login'       => 'boolean',
+        'is_cmmsn_agent'    => 'boolean',
+        'access_locations'  => 'array',
         'selected_contacts' => 'array',
+        'bank_details'      => 'array',
+        'hrm_details'       => 'array',
+        'dob'               => 'date',
         'commission_rate'   => 'decimal:4',
         'max_sales_discount'=> 'decimal:2',
     ];
@@ -109,5 +141,15 @@ class User extends Authenticatable
     public function isPlatformUser(): bool
     {
         return is_null($this->business_id);
+    }
+
+    public function scopeForBusiness($query, int $businessId)
+    {
+        return $query->where('business_id', $businessId);
+    }
+
+    public function scopeCommissionAgents($query)
+    {
+        return $query->where('is_cmmsn_agent', true);
     }
 }

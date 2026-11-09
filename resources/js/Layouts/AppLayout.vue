@@ -8,9 +8,26 @@ const business = computed(() => page.props.auth?.business)
 
 const modules = computed(() => page.props.enabledModules ?? [])
 
+const openSubmenus = ref({
+    user_management: true,
+})
+
+const toggleSubmenu = (module) => {
+    openSubmenus.value[module] = !openSubmenus.value[module]
+}
+
 const allNavLinks = [
-    { label: 'Home',                  module: 'home',                   icon: '🏠', href: 'shop.dashboard' },
-    { label: 'User Management',       module: 'user_management',        icon: '👥', href: 'shop.users.index' },
+    { label: 'Home', module: 'home', icon: '🏠', href: 'shop.dashboard' },
+    {
+        label: 'User Management',
+        module: 'user_management',
+        icon: '👥',
+        children: [
+            { label: 'Users', href: 'shop.users.index' },
+            { label: 'Roles', href: 'shop.roles.index' },
+            { label: 'Sales Commission Agent', href: 'shop.sales-commission-agents.index' },
+        ],
+    },
     { label: 'Contacts',              module: 'contacts',               icon: '📇', href: 'shop.contacts.index' },
     { label: 'Products',              module: 'products',               icon: '📦', href: 'shop.products.index' },
     { label: 'Purchases',             module: 'purchases',              icon: '🛒', href: 'shop.purchases.index' },
@@ -54,16 +71,47 @@ const navLinks = computed(() =>
 
             <!-- Nav -->
             <nav class="flex-1 py-3 px-2 space-y-0.5">
-                <Link
-                    v-for="link in navLinks"
-                    :key="link.module"
-                    :href="route(link.href)"
-                    class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm text-gray-600
-                           hover:bg-primary-50 hover:text-primary-700 transition"
-                >
-                    <span>{{ link.icon }}</span>
-                    <span>{{ link.label }}</span>
-                </Link>
+                <template v-for="link in navLinks" :key="link.module">
+                    <!-- Item with submenu -->
+                    <div v-if="link.children">
+                        <button
+                            type="button"
+                            @click="toggleSubmenu(link.module)"
+                            class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-sm text-gray-700
+                                   hover:bg-primary-50 hover:text-primary-700 transition"
+                        >
+                            <span class="flex items-center gap-2.5">
+                                <span>{{ link.icon }}</span>
+                                <span class="font-medium">{{ link.label }}</span>
+                            </span>
+                            <span class="text-xs transition-transform duration-200" :class="{ 'rotate-90': openSubmenus[link.module] }">
+                                ▶
+                            </span>
+                        </button>
+
+                        <div v-show="openSubmenus[link.module]" class="pl-8 pr-2 py-1 space-y-0.5">
+                            <Link
+                                v-for="child in link.children"
+                                :key="child.href"
+                                :href="route(child.href)"
+                                class="block px-2.5 py-1.5 rounded-md text-xs text-gray-600 hover:text-primary-700 hover:bg-gray-100 transition"
+                            >
+                                {{ child.label }}
+                            </Link>
+                        </div>
+                    </div>
+
+                    <!-- Single link -->
+                    <Link
+                        v-else
+                        :href="route(link.href)"
+                        class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm text-gray-600
+                               hover:bg-primary-50 hover:text-primary-700 transition"
+                    >
+                        <span>{{ link.icon }}</span>
+                        <span>{{ link.label }}</span>
+                    </Link>
+                </template>
             </nav>
 
             <!-- User -->

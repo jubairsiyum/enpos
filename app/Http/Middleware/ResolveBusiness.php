@@ -29,6 +29,9 @@ class ResolveBusiness
         }
 
         $this->currentBusiness->set($business);
+        if (function_exists('setPermissionsTeamId')) {
+            setPermissionsTeamId($business->id);
+        }
 
         return $next($request);
     }

@@ -50,6 +50,11 @@ Route::prefix('app')
     ->group(function () {
         Route::get('/dashboard', fn () => Inertia::render('Shop/Dashboard'))->name('dashboard');
 
+        // User Management
+        Route::resource('users', \App\Http\Controllers\Shop\UserController::class);
+        Route::resource('roles', \App\Http\Controllers\Shop\RoleController::class);
+        Route::resource('sales-commission-agents', \App\Http\Controllers\Shop\SalesCommissionAgentController::class);
+
         // Remaining routes will be added per module
         Route::get('/{any}', fn () => Inertia::render('Shop/Dashboard'))
             ->where('any', '.*')
