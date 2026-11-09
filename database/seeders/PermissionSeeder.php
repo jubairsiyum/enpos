@@ -82,13 +82,16 @@ class PermissionSeeder extends Seeder
         $ownerRole->syncPermissions(Permission::where('name', 'like', 'shop.%')->pluck('name')->toArray());
 
         $cashierRole = Role::firstOrCreate(['name' => 'cashier', 'guard_name' => 'web']);
-        $cashierRole->syncPermissions([
+        $cashierPermissions = array_filter([
             'shop.dashboard.view',
-            'shop.contacts.view', 'shop.contacts.create',
+            'shop.pos.view',
+            'shop.pos.create',
+            'shop.sell.view_all',
+            'shop.sell.create',
+            'shop.customers.view_all',
             'shop.products.view',
-            'shop.sell.view', 'shop.sell.create',
-            'shop.pos.access',
-        ]);
+        ], fn ($p) => Permission::where('name', $p)->exists());
+        $cashierRole->syncPermissions($cashierPermissions);
 
         $this->command->info('Permissions and roles seeded.');
     }

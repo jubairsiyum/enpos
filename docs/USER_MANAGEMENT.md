@@ -52,7 +52,30 @@ Migration: `2026_11_09_100000_add_user_management_columns_to_users_table.php`
 
 ---
 
-## 4. Permissions Registry
+## 4. Permissions Registry & Role Form Architecture
+
+The permissions system mirrors the exact structure of Ultimate POS:
+- **Visual Controls Distinction**:
+  - **Radio Buttons (Circles)**: Used for mutually exclusive scopes:
+    - **Supplier**: `View all supplier` vs `View own supplier`
+    - **Customer (Scope)**: `View all customer` vs `View own customer`
+    - **Customer (Inactivity Filter)**: `no sell from 1m`, `3m`, `6m`, `1y`, or `irrespective of their sell`
+    - **Purchase**: `View all Purchase` vs `View own Purchase`
+    - **Stock Adjustment**: `View all stock adjustment` vs `View own stock adjustment`
+    - **Stock Transfer**: `View all stock transfer` vs `View own stock transfer`
+    - **Sell**: `View all sell`, `View own sell only`, `View paid sells only`, `View due sells only`, `View partially paid sells only`, `View overdue sells only`
+    - **Draft**: `View all drafts` vs `View own drafts`
+    - **Quotation**: `View all quotations` vs `View own quotations`
+    - **Shipments**: `Access all shipments`, `Access own shipments`, `Access pending shipments only`
+    - **Expense**: `Access all expenses` vs `View own expense only`
+    - **AssetManagement**: `View all maintenance` vs `View own maintenance`
+    - **Crm**: `Follow up` scope, `Leads` scope, `Campaigns` scope (divided into 3 distinct radio groups separated by divider lines)
+    - **Repair**: `View all invoice` vs `View own invoice`, and `View All Job Sheets` vs `View Only Assigned Job Sheet`
+  - **Checkboxes (Squares)**: Used for granular toggles (Add, Edit, Delete, Disable options, Settings, Exports, Reports, etc.).
+- **Row Architecture**:
+  - Column 1: Group Name + Info icon tooltip (`ℹ`) when applicable.
+  - Column 2: `[ ] Select all` (displayed on multi-item groups).
+  - Column 3: Stacked radio groups, divider lines (`<hr>`), and checkboxes.
 
 Defined in `config/shop_permissions.php` and seeded via `PermissionSeeder`:
 - **Core Groups**:

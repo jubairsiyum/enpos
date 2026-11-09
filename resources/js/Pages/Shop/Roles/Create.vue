@@ -1,30 +1,70 @@
 <script setup>
 import { useForm, Head, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import InfoTooltip from '@/Components/InfoTooltip.vue'
 
 defineOptions({ layout: AppLayout })
 
 const props = defineProps({
-    permission_groups: { type: Object, required: true },
+    permission_layout: { type: Array, required: true },
+    permission_groups: { type: Object, default: () => ({}) },
 })
+
+const defaultPermissions = [
+    'shop.customers.view_all',
+    'shop.home.view',
+    'shop.selling_price_groups.default',
+    'shop.superadmin.package_subscriptions_access',
+]
 
 const form = useForm({
     name: '',
-    permissions: [],
+    permissions: [...defaultPermissions],
 })
 
-const isGroupAllSelected = (groupPerms) => {
-    const keys = Object.keys(groupPerms)
-    return keys.every(key => form.permissions.includes(key))
+const isRowAllSelected = (row) => {
+    const checkboxes = row.items.filter(i => i.type === 'checkbox')
+    const radios = row.items.filter(i => i.type === 'radio')
+
+    const allCheckboxes = checkboxes.length === 0 || checkboxes.every(c => form.permissions.includes(c.key))
+    const allRadios = radios.length === 0 || radios.every(r => r.options.some(opt => form.permissions.includes(opt.key)))
+
+    return allCheckboxes && allRadios
 }
 
-const toggleGroup = (groupPerms) => {
-    const keys = Object.keys(groupPerms)
-    if (isGroupAllSelected(groupPerms)) {
-        form.permissions = form.permissions.filter(p => !keys.includes(p))
+const toggleRowSelectAll = (row) => {
+    if (isRowAllSelected(row)) {
+        // Collect all keys in this row and remove them
+        const keysToRemove = []
+        row.items.forEach(item => {
+            if (item.type === 'checkbox') keysToRemove.push(item.key)
+            if (item.type === 'radio') item.options.forEach(o => keysToRemove.push(o.key))
+        })
+        form.permissions = form.permissions.filter(p => !keysToRemove.includes(p))
     } else {
-        const toAdd = keys.filter(k => !form.permissions.includes(k))
-        form.permissions.push(...toAdd)
+        // Select all checkboxes and default/first option of each radio group
+        row.items.forEach(item => {
+            if (item.type === 'checkbox') {
+                if (!form.permissions.includes(item.key)) {
+                    form.permissions.push(item.key)
+                }
+            }
+            if (item.type === 'radio') {
+                const groupKeys = item.options.map(o => o.key)
+                // Filter out any existing selection in this radio group
+                form.permissions = form.permissions.filter(p => !groupKeys.includes(p))
+                // Select the first option (e.g. view all)
+                form.permissions.push(item.options[0].key)
+            }
+        })
+    }
+}
+
+const selectRadio = (options, selectedKey) => {
+    const groupKeys = options.map(o => o.key)
+    form.permissions = form.permissions.filter(p => !groupKeys.includes(p))
+    if (selectedKey) {
+        form.permissions.push(selectedKey)
     }
 }
 
@@ -61,64 +101,98 @@ const submit = () => {
             </div>
 
             <!-- Permissions Card -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
-                <h2 class="text-sm font-semibold text-gray-900 border-b border-gray-100 pb-2">Permissions:</h2>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+                <div class="border-b-2 border-indigo-600 pb-2">
+                    <h2 class="text-sm font-bold text-gray-900">Permissions:</h2>
+                </div>
 
-                <div class="divide-y divide-gray-100">
+                <div class="divide-y divide-gray-200">
                     <div
-                        v-for="(perms, groupName) in permission_groups"
-                        :key="groupName"
-                        class="py-4 grid grid-cols-1 md:grid-cols-12 gap-4 items-start"
+                        v-for="row in permission_layout"
+                        :key="row.group"
+                        class="py-4 flex flex-col md:flex-row gap-4 items-start"
                     >
-                        <!-- Group Name -->
-                        <div class="md:col-span-3">
-                            <span class="text-xs font-bold text-gray-800">{{ groupName }}</span>
+                        <!-- Column 1: Group Name & Tooltip -->
+                        <div class="w-full md:w-52 flex-shrink-0 flex items-center gap-1.5">
+                            <span class="text-xs font-bold text-gray-900">{{ row.group }}</span>
+                            <InfoTooltip v-if="row.info" :text="row.info" />
                         </div>
 
-                        <!-- Select All Checkbox -->
-                        <div class="md:col-span-2">
-                            <label class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    :checked="isGroupAllSelected(perms)"
-                                    @change="toggleGroup(perms)"
-                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                                />
-                                Select all
-                            </label>
-                        </div>
-
-                        <!-- Individual Permissions -->
-                        <div class="md:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <!-- Column 2: Select All (if applicable) -->
+                        <div class="w-full md:w-36 flex-shrink-0">
                             <label
-                                v-for="(label, permKey) in perms"
-                                :key="permKey"
-                                class="inline-flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer hover:text-gray-900"
+                                v-if="row.has_select_all"
+                                class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 cursor-pointer select-none"
                             >
                                 <input
                                     type="checkbox"
-                                    :value="permKey"
-                                    v-model="form.permissions"
-                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    :checked="isRowAllSelected(row)"
+                                    @change="toggleRowSelectAll(row)"
+                                    class="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
-                                <span>{{ label }}</span>
+                                <span>Select all</span>
                             </label>
+                        </div>
+
+                        <!-- Column 3: Items (Radios vs Checkboxes vs Dividers) -->
+                        <div class="flex-1 space-y-2 w-full">
+                            <template v-for="(item, idx) in row.items" :key="idx">
+                                <!-- Horizontal Divider -->
+                                <hr v-if="item.type === 'divider'" class="border-gray-200 my-2" />
+
+                                <!-- Radio Group (Circles) -->
+                                <div v-else-if="item.type === 'radio'" class="space-y-1.5">
+                                    <label
+                                        v-for="opt in item.options"
+                                        :key="opt.key"
+                                        class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none hover:text-gray-900"
+                                    >
+                                        <input
+                                            type="radio"
+                                            :name="`${row.group}_${item.name}`"
+                                            :value="opt.key"
+                                            :checked="form.permissions.includes(opt.key)"
+                                            @change="selectRadio(item.options, opt.key)"
+                                            class="w-3.5 h-3.5 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                                        />
+                                        <span>{{ opt.label }}</span>
+                                    </label>
+                                </div>
+
+                                <!-- Checkbox (Square) -->
+                                <label
+                                    v-else-if="item.type === 'checkbox'"
+                                    class="inline-flex items-center gap-2 text-xs text-gray-700 cursor-pointer select-none hover:text-gray-900"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        :value="item.key"
+                                        v-model="form.permissions"
+                                        class="w-3.5 h-3.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    <span>{{ item.label }}</span>
+                                    <InfoTooltip v-if="item.info" :text="item.info" />
+                                </label>
+                            </template>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- Submit Button -->
-            <div class="flex items-center justify-end gap-3">
-                <Link :href="route('shop.roles.index')" class="px-4 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50">
+            <div class="flex justify-end gap-3">
+                <Link
+                    :href="route('shop.roles.index')"
+                    class="px-5 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition"
+                >
                     Cancel
                 </Link>
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg shadow-sm transition disabled:opacity-50"
+                    class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-sm transition disabled:opacity-50"
                 >
-                    Save
+                    {{ form.processing ? 'Saving...' : 'Save' }}
                 </button>
             </div>
         </form>

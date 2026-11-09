@@ -1,9 +1,16 @@
 <?php
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Shop-Level Permissions Configuration
+    |--------------------------------------------------------------------------
+    | Flat groups for permission seeding and Spatie team verification.
+    */
     'groups' => [
         'Others' => [
             'shop.others.export_buttons'   => 'View export to buttons (csv/excel/print/pdf) on tables',
+            'shop.others.payment_received' => 'Payment Received',
             'shop.others.payment_reminder' => 'Payment Reminder',
         ],
         'User' => [
@@ -78,7 +85,7 @@ return [
             'shop.pos.edit_product_price'         => 'Edit product price from POS screen',
             'shop.pos.edit_product_discount'      => 'Edit product discount from POS screen',
             'shop.pos.add_edit_payment'           => 'Add/Edit Payment',
-            'shop.pos.print_invoice'              => 'Print Invoice',
+            'shop.pos.print_invoice'              => 'Print invoice',
             'shop.pos.disable_multiple_pay'       => 'Disable Multiple Pay',
             'shop.pos.disable_draft'              => 'Disable Draft',
             'shop.pos.disable_express_checkout'   => 'Disable Express Checkout',
@@ -102,21 +109,23 @@ return [
             'shop.sell.add_payment'               => 'Add sell payment',
             'shop.sell.edit_payment'              => 'Edit sell payment',
             'shop.sell.delete_payment'            => 'Delete sell payment',
-            'shop.sell.add_edit_order_discount'   => 'Add/Edit Order Discount',
+            'shop.sell.edit_product_price'        => 'Edit product price from sales screen',
+            'shop.sell.edit_product_discount'     => 'Edit product discount from Sale screen',
+            'shop.sell.add_edit_order_discount'   => 'Add/Edit/Delete Discount',
             'shop.sell.access_all_sell_return'    => 'Access all sell return',
             'shop.sell.access_own_sell_return'    => 'Access own sell return',
-            'shop.sell.add_edit_invoice_number'   => 'Add/Edit invoice number',
+            'shop.sell.add_edit_invoice_number'   => 'Add/edit invoice number',
         ],
         'Draft' => [
             'shop.draft.view_all' => 'View all drafts',
             'shop.draft.view_own' => 'View own drafts',
-            'shop.draft.create'   => 'Add draft',
+            'shop.draft.edit'     => 'Edit draft',
             'shop.draft.delete'   => 'Delete draft',
         ],
         'Quotation' => [
             'shop.quotation.view_all' => 'View all quotations',
             'shop.quotation.view_own' => 'View own quotations',
-            'shop.quotation.create'   => 'Add quotation',
+            'shop.quotation.edit'     => 'Edit quotation',
             'shop.quotation.delete'   => 'Delete quotation',
         ],
         'Shipments' => [
@@ -154,16 +163,16 @@ return [
             'shop.category.delete' => 'Delete category',
         ],
         'Report' => [
-            'shop.reports.purchase_and_sell'   => 'View purchase & sell report',
-            'shop.reports.tax'                 => 'View Tax report',
-            'shop.reports.supplier_customer'   => 'View Supplier / Customer report',
-            'shop.reports.expense'             => 'View expense report',
-            'shop.reports.profit_loss'         => 'View profit/loss report',
-            'shop.reports.stock'               => 'View stock report, stock adjustment report & stock expiry report',
-            'shop.reports.trending_products'   => 'View trending product report',
-            'shop.reports.register'            => 'View register report',
-            'shop.reports.sales_representative'=> 'View sales representative report',
-            'shop.reports.stock_alert'         => 'View product stock alert',
+            'shop.reports.purchase_and_sell'    => 'View purchase & sell report',
+            'shop.reports.tax'                  => 'View Tax report',
+            'shop.reports.supplier_customer'    => 'View Supplier & Customer report',
+            'shop.reports.expense'              => 'View expense report',
+            'shop.reports.profit_loss'          => 'View profit/loss report',
+            'shop.reports.stock'                => 'View stock report, stock adjustment report & stock expiry report',
+            'shop.reports.trending_products'    => 'View trending product report',
+            'shop.reports.register'             => 'View register report',
+            'shop.reports.sales_representative' => 'View sales representative report',
+            'shop.reports.stock_alert'          => 'View product stock value',
         ],
         'Settings' => [
             'shop.settings.business' => 'Access business settings',
@@ -204,14 +213,14 @@ return [
             'shop.accounting.manage_budget'     => 'Manage Budget',
             'shop.accounting.view_reports'      => 'View Reports',
         ],
-        'AIAssistance' => [
-            'shop.ai_assistance.access' => 'access to omni-channel or ai_assistance_module',
+        'AiAssistance' => [
+            'shop.ai_assistance.access' => 'aiassistance:fang.access_aiassistance_module',
         ],
         'AssetManagement' => [
             'shop.assets.view'                 => 'View Asset',
-            'shop.assets.create'               => 'Add Asset',
-            'shop.assets.edit'                 => 'Edit Asset',
-            'shop.assets.delete'               => 'Delete Asset',
+            'shop.assets.create'               => 'Add asset',
+            'shop.assets.edit'                 => 'Edit asset',
+            'shop.assets.delete'               => 'Delete asset',
             'shop.assets.view_all_maintenance' => 'View all maintenance',
             'shop.assets.view_own_maintenance' => 'View own maintenance',
         ],
@@ -220,8 +229,8 @@ return [
             'shop.cheques.view_issued'   => 'View Issued Cheques',
         ],
         'Crm' => [
-            'shop.crm.access_all_follow_ups' => 'Access all follow ups',
-            'shop.crm.access_own_follow_ups' => 'Access own follow ups',
+            'shop.crm.access_all_follow_ups' => 'Access all follow up',
+            'shop.crm.access_own_follow_ups' => 'Access own follow up',
             'shop.crm.access_all_leads'      => 'Access all leads',
             'shop.crm.access_own_leads'      => 'Access own leads',
             'shop.crm.access_all_campaigns'  => 'Access all campaigns',
@@ -230,7 +239,7 @@ return [
             'shop.crm.access_sources'        => 'Access sources',
             'shop.crm.access_life_stage'     => 'Access life stage',
             'shop.crm.access_proposal'       => 'Access proposal',
-            'shop.crm.view_requests'         => 'View requests',
+            'shop.crm.view_requests'         => 'View reports',
         ],
         'CustomDashboard' => [
             'shop.dashboard.manage' => 'Manage Dashboard',
@@ -269,7 +278,7 @@ return [
             'shop.gym.packages_manage'             => 'Manage Packages',
             'shop.gym.health_manage'               => 'Manage Health',
             'shop.gym.setting_manage'              => 'Manage Setting',
-            'shop.gym.view_manage'                 => 'Manage view',
+            'shop.gym.view_manage'                 => 'Manage class',
             'shop.gym.subscription_payment_add'    => 'Add Subscription Payment',
             'shop.gym.subscription_payment_edit'   => 'Edit Subscription Payment',
             'shop.gym.subscription_payment_delete' => 'Delete Subscription Payment',
@@ -290,9 +299,9 @@ return [
             'shop.hms.booking_payment_delete' => 'Delete booking payment',
         ],
         'Manufacturing' => [
-            'shop.manufacturing.recipe_view'   => 'View Recipe',
-            'shop.manufacturing.recipe_create' => 'Add Recipe',
-            'shop.manufacturing.recipe_edit'   => 'Edit Recipe',
+            'shop.manufacturing.recipe_view'       => 'View Recipe',
+            'shop.manufacturing.recipe_create'     => 'Add Recipe',
+            'shop.manufacturing.recipe_edit'       => 'Edit Recipe',
             'shop.manufacturing.production_access' => 'Access Production',
         ],
         'Project' => [
@@ -322,17 +331,663 @@ return [
             'shop.superadmin.package_subscriptions_access' => 'Access package subscriptions',
         ],
         'Woocommerce' => [
-            'shop.woocommerce.sync_categories'      => 'Sync Product Categories',
-            'shop.woocommerce.sync_products'        => 'Sync Products',
-            'shop.woocommerce.sync_orders'          => 'Sync Orders',
-            'shop.woocommerce.map_tax_rates'        => 'Map Tax Rates',
-            'shop.woocommerce.api_settings_access'  => 'Access Woocommerce API settings',
+            'shop.woocommerce.sync_categories'     => 'Sync Product Categories',
+            'shop.woocommerce.sync_products'       => 'Sync Products',
+            'shop.woocommerce.sync_orders'         => 'Sync Orders',
+            'shop.woocommerce.map_tax_rates'       => 'Map Tax Rates',
+            'shop.woocommerce.api_settings_access' => 'Access Woocommerce API settings',
         ],
         'ZatcaIntegrationKsa' => [
             'shop.zatca.module_access'     => 'Access Zatca Module',
-            'shop.zatca.onboarding_system' => 'Onboarding System',
+            'shop.zatca.onboarding_system' => 'Onboarding Screen',
             'shop.zatca.sales'             => 'Sales',
             'shop.zatca.sales_return'      => 'Sales Return',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Structured Layout Representation (matching exact visual images)
+    |--------------------------------------------------------------------------
+    | Differentiates radios (circles) vs checkboxes (squares), dividers,
+    | info tooltips, and "Select all" visibility per row.
+    */
+    'layout' => [
+        // Image 1
+        [
+            'group'          => 'Others',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.others.export_buttons', 'label' => 'View export to buttons (csv/excel/print/pdf) on tables'],
+                ['type' => 'checkbox', 'key' => 'shop.others.payment_received', 'label' => 'Payment Received'],
+                ['type' => 'checkbox', 'key' => 'shop.others.payment_reminder', 'label' => 'Payment Reminder'],
+            ],
+        ],
+        [
+            'group'          => 'User',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.users.view', 'label' => 'View user'],
+                ['type' => 'checkbox', 'key' => 'shop.users.create', 'label' => 'Add user'],
+                ['type' => 'checkbox', 'key' => 'shop.users.edit', 'label' => 'Edit user'],
+                ['type' => 'checkbox', 'key' => 'shop.users.delete', 'label' => 'Delete user'],
+            ],
+        ],
+        [
+            'group'          => 'Roles',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.roles.view', 'label' => 'View role'],
+                ['type' => 'checkbox', 'key' => 'shop.roles.create', 'label' => 'Add Role'],
+                ['type' => 'checkbox', 'key' => 'shop.roles.edit', 'label' => 'Edit Role'],
+                ['type' => 'checkbox', 'key' => 'shop.roles.delete', 'label' => 'Delete role'],
+            ],
+        ],
+        [
+            'group'          => 'Supplier',
+            'has_select_all' => true,
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'supplier_view',
+                    'options' => [
+                        ['key' => 'shop.suppliers.view_all', 'label' => 'View all supplier'],
+                        ['key' => 'shop.suppliers.view_own', 'label' => 'View own supplier'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.suppliers.create', 'label' => 'Add supplier'],
+                ['type' => 'checkbox', 'key' => 'shop.suppliers.edit', 'label' => 'Edit supplier'],
+                ['type' => 'checkbox', 'key' => 'shop.suppliers.delete', 'label' => 'Delete supplier'],
+            ],
+        ],
+        [
+            'group'          => 'Customer',
+            'info'           => 'To view all customers with no sell from a specific time View all customer permission is required otherwise it will filter with only cusromers created by the logged in user',
+            'has_select_all' => true,
+            'default_keys'   => ['shop.customers.view_all'],
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'customer_view_scope',
+                    'options' => [
+                        ['key' => 'shop.customers.view_all', 'label' => 'View all customer'],
+                        ['key' => 'shop.customers.view_own', 'label' => 'View own customer'],
+                    ],
+                ],
+                ['type' => 'divider'],
+                [
+                    'type'    => 'radio',
+                    'name'    => 'customer_no_sell_filter',
+                    'options' => [
+                        ['key' => 'shop.customers.view_no_sell_1m', 'label' => 'View customers with no sell from one month only'],
+                        ['key' => 'shop.customers.view_no_sell_3m', 'label' => 'View customers with no sell from three months only'],
+                        ['key' => 'shop.customers.view_no_sell_6m', 'label' => 'View customers with no sell from six months only'],
+                        ['key' => 'shop.customers.view_no_sell_1y', 'label' => 'View customers with no sell from one year only'],
+                        ['key' => 'shop.customers.view_all_regardless', 'label' => 'View customers irrespective of their sell'],
+                    ],
+                ],
+                ['type' => 'divider'],
+                ['type' => 'checkbox', 'key' => 'shop.customers.create', 'label' => 'Add customer'],
+                ['type' => 'checkbox', 'key' => 'shop.customers.edit', 'label' => 'Edit customer'],
+                ['type' => 'checkbox', 'key' => 'shop.customers.delete', 'label' => 'Delete customer'],
+            ],
+        ],
+
+        // Image 2
+        [
+            'group'          => 'Product',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.products.view', 'label' => 'View product'],
+                ['type' => 'checkbox', 'key' => 'shop.products.create', 'label' => 'Add product'],
+                ['type' => 'checkbox', 'key' => 'shop.products.edit', 'label' => 'Edit product'],
+                ['type' => 'checkbox', 'key' => 'shop.products.delete', 'label' => 'Delete product'],
+                ['type' => 'checkbox', 'key' => 'shop.products.add_opening_stock', 'label' => 'Add Opening Stock'],
+                ['type' => 'checkbox', 'key' => 'shop.products.view_purchase_price', 'label' => 'View Purchase Price', 'info' => 'Permission to view purchase price in product details, stock transfer and stock adjustment'],
+            ],
+        ],
+        [
+            'group'          => 'Purchase',
+            'has_select_all' => true,
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'purchase_view',
+                    'options' => [
+                        ['key' => 'shop.purchases.view_all', 'label' => 'View all Purchase'],
+                        ['key' => 'shop.purchases.view_own', 'label' => 'View own Purchase'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.purchases.create', 'label' => 'Add purchase'],
+                ['type' => 'checkbox', 'key' => 'shop.purchases.edit', 'label' => 'Edit purchase'],
+                ['type' => 'checkbox', 'key' => 'shop.purchases.delete', 'label' => 'Delete purchase'],
+                ['type' => 'checkbox', 'key' => 'shop.purchases.add_payment', 'label' => 'Add purchase payment'],
+                ['type' => 'checkbox', 'key' => 'shop.purchases.edit_payment', 'label' => 'Edit purchase payment'],
+                ['type' => 'checkbox', 'key' => 'shop.purchases.delete_payment', 'label' => 'Delete purchase payment'],
+                ['type' => 'checkbox', 'key' => 'shop.purchases.update_status', 'label' => 'Update Status'],
+            ],
+        ],
+        [
+            'group'          => 'Stock Adjustment',
+            'has_select_all' => true,
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'stock_adjustment_view',
+                    'options' => [
+                        ['key' => 'shop.stock_adjustment.view_all', 'label' => 'View all stock adjustment'],
+                        ['key' => 'shop.stock_adjustment.view_own', 'label' => 'View own stock adjustment'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.stock_adjustment.create', 'label' => 'Add stock adjustment'],
+                ['type' => 'checkbox', 'key' => 'shop.stock_adjustment.edit', 'label' => 'Edit stock adjustment'],
+                ['type' => 'checkbox', 'key' => 'shop.stock_adjustment.delete', 'label' => 'Delete stock adjustment'],
+            ],
+        ],
+        [
+            'group'          => 'Stock Transfer',
+            'has_select_all' => true,
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'stock_transfer_view',
+                    'options' => [
+                        ['key' => 'shop.stock_transfers.view_all', 'label' => 'View all stock transfer'],
+                        ['key' => 'shop.stock_transfers.view_own', 'label' => 'View own stock transfer'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.stock_transfers.create', 'label' => 'Add stock transfer'],
+                ['type' => 'checkbox', 'key' => 'shop.stock_transfers.edit', 'label' => 'Edit stock transfer'],
+                ['type' => 'checkbox', 'key' => 'shop.stock_transfers.delete', 'label' => 'Delete stock transfer'],
+            ],
+        ],
+
+        // Image 3
+        [
+            'group'          => 'POS',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.pos.view', 'label' => 'View POS sell'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.create', 'label' => 'Add POS sell'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.edit', 'label' => 'Edit POS sell'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.delete', 'label' => 'Delete POS sell'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.edit_product_price', 'label' => 'Edit product price from POS screen'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.edit_product_discount', 'label' => 'Edit product discount from POS screen'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.add_edit_payment', 'label' => 'Add/Edit Payment'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.print_invoice', 'label' => 'Print invoice'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.disable_multiple_pay', 'label' => 'Disable Multiple Pay'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.disable_draft', 'label' => 'Disable Draft'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.disable_express_checkout', 'label' => 'Disable Express Checkout'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.disable_discount', 'label' => 'Disable Discount'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.disable_suspend_sale', 'label' => 'Disable Suspend Sale'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.disable_credit_sale_button', 'label' => 'Disable credit sale button'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.disable_quotation', 'label' => 'Disable Quotation'],
+                ['type' => 'checkbox', 'key' => 'shop.pos.disable_card', 'label' => 'Disable Card'],
+            ],
+        ],
+        [
+            'group'          => 'Sell',
+            'info'           => 'To view sells on the basis of payment status View all sell permission is required otherwise it will filter with only sells created by the logged in user',
+            'has_select_all' => true,
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'sell_view',
+                    'options' => [
+                        ['key' => 'shop.sell.view_all', 'label' => 'View all sell'],
+                        ['key' => 'shop.sell.view_own', 'label' => 'View own sell only'],
+                        ['key' => 'shop.sell.view_paid', 'label' => 'View paid sells only'],
+                        ['key' => 'shop.sell.view_due', 'label' => 'View due sells only'],
+                        ['key' => 'shop.sell.view_partially_paid', 'label' => 'View partially paid sells only'],
+                        ['key' => 'shop.sell.view_overdue', 'label' => 'View overdue sells only'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.sell.create', 'label' => 'Add Sell'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.edit', 'label' => 'Update Sell'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.delete', 'label' => 'Delete Sell'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.commission_agent_view_own', 'label' => 'Commission agent can view their own sell'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.add_payment', 'label' => 'Add sell payment'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.edit_payment', 'label' => 'Edit sell payment'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.delete_payment', 'label' => 'Delete sell payment'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.edit_product_price', 'label' => 'Edit product price from sales screen'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.edit_product_discount', 'label' => 'Edit product discount from Sale screen'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.add_edit_order_discount', 'label' => 'Add/Edit/Delete Discount'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.access_all_sell_return', 'label' => 'Access all sell return'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.access_own_sell_return', 'label' => 'Access own sell return'],
+                ['type' => 'checkbox', 'key' => 'shop.sell.add_edit_invoice_number', 'label' => 'Add/edit invoice number'],
+            ],
+        ],
+        [
+            'group'          => 'Draft',
+            'has_select_all' => true,
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'draft_view',
+                    'options' => [
+                        ['key' => 'shop.draft.view_all', 'label' => 'View all drafts'],
+                        ['key' => 'shop.draft.view_own', 'label' => 'View own drafts'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.draft.edit', 'label' => 'Edit draft'],
+                ['type' => 'checkbox', 'key' => 'shop.draft.delete', 'label' => 'Delete draft'],
+            ],
+        ],
+        [
+            'group'          => 'Quotation',
+            'has_select_all' => true,
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'quotation_view',
+                    'options' => [
+                        ['key' => 'shop.quotation.view_all', 'label' => 'View all quotations'],
+                        ['key' => 'shop.quotation.view_own', 'label' => 'View own quotations'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.quotation.edit', 'label' => 'Edit quotation'],
+                ['type' => 'checkbox', 'key' => 'shop.quotation.delete', 'label' => 'Delete quotation'],
+            ],
+        ],
+        [
+            'group'          => 'Shipments',
+            'has_select_all' => true,
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'shipments_view',
+                    'options' => [
+                        ['key' => 'shop.shipments.access_all', 'label' => 'Access all shipments'],
+                        ['key' => 'shop.shipments.access_own', 'label' => 'Access own shipments'],
+                        ['key' => 'shop.shipments.access_pending', 'label' => 'Access pending shipments only'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.shipments.commission_agent_access', 'label' => 'Commission agent can access their own shipments'],
+            ],
+        ],
+        [
+            'group'          => 'Cash Register',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.cash_register.view', 'label' => 'View cash register'],
+                ['type' => 'checkbox', 'key' => 'shop.cash_register.close', 'label' => 'Close cash register'],
+            ],
+        ],
+        [
+            'group'          => 'Brand',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.brand.view', 'label' => 'View brand'],
+                ['type' => 'checkbox', 'key' => 'shop.brand.create', 'label' => 'Add brand'],
+                ['type' => 'checkbox', 'key' => 'shop.brand.edit', 'label' => 'Edit brand'],
+                ['type' => 'checkbox', 'key' => 'shop.brand.delete', 'label' => 'Delete brand'],
+            ],
+        ],
+        [
+            'group'          => 'Tax rate',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.tax_rate.view', 'label' => 'View tax rate'],
+                ['type' => 'checkbox', 'key' => 'shop.tax_rate.create', 'label' => 'Add tax rate'],
+                ['type' => 'checkbox', 'key' => 'shop.tax_rate.edit', 'label' => 'Edit tax rate'],
+                ['type' => 'checkbox', 'key' => 'shop.tax_rate.delete', 'label' => 'Delete tax rate'],
+            ],
+        ],
+
+        // Image 4
+        [
+            'group'          => 'Unit',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.unit.view', 'label' => 'View unit'],
+                ['type' => 'checkbox', 'key' => 'shop.unit.create', 'label' => 'Add unit'],
+                ['type' => 'checkbox', 'key' => 'shop.unit.edit', 'label' => 'Edit unit'],
+                ['type' => 'checkbox', 'key' => 'shop.unit.delete', 'label' => 'Delete unit'],
+            ],
+        ],
+        [
+            'group'          => 'Category',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.category.view', 'label' => 'View category'],
+                ['type' => 'checkbox', 'key' => 'shop.category.create', 'label' => 'Add category'],
+                ['type' => 'checkbox', 'key' => 'shop.category.edit', 'label' => 'Edit category'],
+                ['type' => 'checkbox', 'key' => 'shop.category.delete', 'label' => 'Delete category'],
+            ],
+        ],
+        [
+            'group'          => 'Report',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.reports.purchase_and_sell', 'label' => 'View purchase & sell report'],
+                ['type' => 'checkbox', 'key' => 'shop.reports.tax', 'label' => 'View Tax report'],
+                ['type' => 'checkbox', 'key' => 'shop.reports.supplier_customer', 'label' => 'View Supplier & Customer report'],
+                ['type' => 'checkbox', 'key' => 'shop.reports.expense', 'label' => 'View expense report'],
+                ['type' => 'checkbox', 'key' => 'shop.reports.profit_loss', 'label' => 'View profit/loss report'],
+                ['type' => 'checkbox', 'key' => 'shop.reports.stock', 'label' => 'View stock report, stock adjustment report & stock expiry report'],
+                ['type' => 'checkbox', 'key' => 'shop.reports.trending_products', 'label' => 'View trending product report'],
+                ['type' => 'checkbox', 'key' => 'shop.reports.register', 'label' => 'View register report'],
+                ['type' => 'checkbox', 'key' => 'shop.reports.sales_representative', 'label' => 'View sales representative report'],
+                ['type' => 'checkbox', 'key' => 'shop.reports.stock_alert', 'label' => 'View product stock value'],
+            ],
+        ],
+        [
+            'group'          => 'Settings',
+            'has_select_all' => true,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.settings.business', 'label' => 'Access business settings'],
+                ['type' => 'checkbox', 'key' => 'shop.settings.barcode', 'label' => 'Access barcode settings'],
+                ['type' => 'checkbox', 'key' => 'shop.settings.invoice', 'label' => 'Access invoice settings'],
+                ['type' => 'checkbox', 'key' => 'shop.settings.printers', 'label' => 'Access printers'],
+            ],
+        ],
+        [
+            'group'          => 'Expense',
+            'has_select_all' => true,
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'expense_view',
+                    'options' => [
+                        ['key' => 'shop.expenses.access_all', 'label' => 'Access all expenses'],
+                        ['key' => 'shop.expenses.view_own', 'label' => 'View own expense only'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.expenses.create', 'label' => 'Add Expense'],
+                ['type' => 'checkbox', 'key' => 'shop.expenses.edit', 'label' => 'Edit Expense'],
+                ['type' => 'checkbox', 'key' => 'shop.expenses.delete', 'label' => 'Delete Expense'],
+            ],
+        ],
+        [
+            'group'          => 'Home',
+            'info'           => 'If unchecked only Welcome message will be displayed in Home.',
+            'has_select_all' => false,
+            'default_keys'   => ['shop.home.view'],
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.home.view', 'label' => 'View Home data'],
+            ],
+        ],
+        [
+            'group'          => 'Account',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.accounts.access', 'label' => 'Access Accounts'],
+                ['type' => 'checkbox', 'key' => 'shop.accounts.edit_transaction', 'label' => 'Edit account transaction'],
+                ['type' => 'checkbox', 'key' => 'shop.accounts.delete_transaction', 'label' => 'Delete account transaction'],
+            ],
+        ],
+        [
+            'group'          => 'Access selling price groups',
+            'has_select_all' => false,
+            'default_keys'   => ['shop.selling_price_groups.default'],
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.selling_price_groups.default', 'label' => 'Default Selling Price'],
+            ],
+        ],
+
+        // Image 5
+        [
+            'group'          => 'Accounting',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.accounting.access', 'label' => 'Access Accounting Module'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.manage_accounts', 'label' => 'Manage Accounts'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.view_journal', 'label' => 'View Journal'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.add_journal', 'label' => 'Add Journal'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.edit_journal', 'label' => 'Edit Journal'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.delete_journal', 'label' => 'Delete Journal'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.map_transactions', 'label' => 'Map Transactions'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.view_transfer', 'label' => 'View Transfer'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.add_transfer', 'label' => 'Add Transfer'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.edit_transfer', 'label' => 'Edit Transfer'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.delete_transfer', 'label' => 'Delete Transfer'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.manage_budget', 'label' => 'Manage Budget'],
+                ['type' => 'checkbox', 'key' => 'shop.accounting.view_reports', 'label' => 'View Reports'],
+            ],
+        ],
+        [
+            'group'          => 'AiAssistance',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.ai_assistance.access', 'label' => 'aiassistance:fang.access_aiassistance_module'],
+            ],
+        ],
+        [
+            'group'          => 'AssetManagement',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.assets.view', 'label' => 'View Asset'],
+                ['type' => 'checkbox', 'key' => 'shop.assets.create', 'label' => 'Add asset'],
+                ['type' => 'checkbox', 'key' => 'shop.assets.edit', 'label' => 'Edit asset'],
+                ['type' => 'checkbox', 'key' => 'shop.assets.delete', 'label' => 'Delete asset'],
+                [
+                    'type'    => 'radio',
+                    'name'    => 'asset_maintenance_view',
+                    'options' => [
+                        ['key' => 'shop.assets.view_all_maintenance', 'label' => 'View all maintenance'],
+                        ['key' => 'shop.assets.view_own_maintenance', 'label' => 'View own maintenance'],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'group'          => 'Cheque',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.cheques.view_received', 'label' => 'View Received Cheques'],
+                ['type' => 'checkbox', 'key' => 'shop.cheques.view_issued', 'label' => 'View Issued Cheques'],
+            ],
+        ],
+        [
+            'group'          => 'Crm',
+            'has_select_all' => false,
+            'items'          => [
+                [
+                    'type'    => 'radio',
+                    'name'    => 'crm_followup_view',
+                    'options' => [
+                        ['key' => 'shop.crm.access_all_follow_ups', 'label' => 'Access all follow up'],
+                        ['key' => 'shop.crm.access_own_follow_ups', 'label' => 'Access own follow up'],
+                    ],
+                ],
+                ['type' => 'divider'],
+                [
+                    'type'    => 'radio',
+                    'name'    => 'crm_leads_view',
+                    'options' => [
+                        ['key' => 'shop.crm.access_all_leads', 'label' => 'Access all leads'],
+                        ['key' => 'shop.crm.access_own_leads', 'label' => 'Access own leads'],
+                    ],
+                ],
+                ['type' => 'divider'],
+                [
+                    'type'    => 'radio',
+                    'name'    => 'crm_campaigns_view',
+                    'options' => [
+                        ['key' => 'shop.crm.access_all_campaigns', 'label' => 'Access all campaigns'],
+                        ['key' => 'shop.crm.access_own_campaigns', 'label' => 'Access own campaigns'],
+                    ],
+                ],
+                ['type' => 'divider'],
+                ['type' => 'checkbox', 'key' => 'shop.crm.access_contact_login', 'label' => 'Access contact login'],
+                ['type' => 'checkbox', 'key' => 'shop.crm.access_sources', 'label' => 'Access sources'],
+                ['type' => 'checkbox', 'key' => 'shop.crm.access_life_stage', 'label' => 'Access life stage'],
+                ['type' => 'checkbox', 'key' => 'shop.crm.access_proposal', 'label' => 'Access proposal'],
+                ['type' => 'checkbox', 'key' => 'shop.crm.view_requests', 'label' => 'View reports'],
+            ],
+        ],
+        [
+            'group'          => 'CustomDashboard',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.dashboard.manage', 'label' => 'Manage Dashboard'],
+            ],
+        ],
+
+        // Extended modular groups (Images 1, 2 & 3)
+        [
+            'group'          => 'Essentials',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.essentials.leave_type_manage', 'label' => 'Add/Edit/View/Delete leave type'],
+                [
+                    'type'    => 'radio',
+                    'name'    => 'essentials_leave_view',
+                    'options' => [
+                        ['key' => 'shop.essentials.leave_all_manage', 'label' => 'Add/Edit/View/Delete all leave'],
+                        ['key' => 'shop.essentials.leave_own_manage', 'label' => 'Add/View own leave'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.leave_approve', 'label' => 'Approve Leave'],
+                [
+                    'type'    => 'radio',
+                    'name'    => 'essentials_attendance_view',
+                    'options' => [
+                        ['key' => 'shop.essentials.attendance_all_manage', 'label' => 'Add/Edit/View/Delete all attendance'],
+                        ['key' => 'shop.essentials.attendance_own_view', 'label' => 'View own attendance'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.attendance_web', 'label' => 'Allow users to enter their own attendance from web'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.attendance_api', 'label' => 'Allow users to enter their own attendance from api'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.pay_component_view', 'label' => 'View Pay Component'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.pay_component_create', 'label' => 'Add Pay Component'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.department_manage', 'label' => 'Add/Edit/View/Delete department'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.designation_manage', 'label' => 'Add/Edit/View/Delete designation'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.payroll_view_all', 'label' => 'View all Payroll'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.payroll_create', 'label' => 'Add Payroll'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.payroll_edit', 'label' => 'Edit Payroll'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.payroll_delete', 'label' => 'Delete Payroll'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.todos_assign', 'label' => "Assign To Do's to others"],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.todos_create', 'label' => "Add To Do's"],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.todos_edit', 'label' => "Edit To Do's"],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.todos_delete', 'label' => "Delete To Do's"],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.message_create', 'label' => 'Create Message'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.message_view', 'label' => 'View Message'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.sales_targets_access', 'label' => 'Access Sales Targets'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.knowledge_base_edit', 'label' => 'Edit Knowledge Base'],
+                ['type' => 'checkbox', 'key' => 'shop.essentials.knowledge_base_delete', 'label' => 'Delete Knowledge Base'],
+            ],
+        ],
+        [
+            'group'          => 'Gym',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.gym.member_manage', 'label' => 'Manage Member'],
+                ['type' => 'checkbox', 'key' => 'shop.gym.subscription_manage', 'label' => 'Manage subscription'],
+                ['type' => 'checkbox', 'key' => 'shop.gym.attendance_manage', 'label' => 'Manage Attendance'],
+                ['type' => 'checkbox', 'key' => 'shop.gym.packages_manage', 'label' => 'Manage Packages'],
+                ['type' => 'checkbox', 'key' => 'shop.gym.health_manage', 'label' => 'Manage Health'],
+                ['type' => 'checkbox', 'key' => 'shop.gym.setting_manage', 'label' => 'Manage Setting'],
+                ['type' => 'checkbox', 'key' => 'shop.gym.view_manage', 'label' => 'Manage class'],
+                ['type' => 'checkbox', 'key' => 'shop.gym.subscription_payment_add', 'label' => 'Add Subscription Payment'],
+                ['type' => 'checkbox', 'key' => 'shop.gym.subscription_payment_edit', 'label' => 'Edit Subscription Payment'],
+                ['type' => 'checkbox', 'key' => 'shop.gym.subscription_payment_delete', 'label' => 'Delete Subscription Payment'],
+            ],
+        ],
+        [
+            'group'          => 'Hms',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.hms.rooms_manage', 'label' => 'Manage Rooms'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.price_manage', 'label' => 'Manage Price'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.unavailable_manage', 'label' => 'Manage Unavailable'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.extra_manage', 'label' => 'Manage extra'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.coupon_manage', 'label' => 'Manage coupon'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.booking_create', 'label' => 'Add booking'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.booking_edit', 'label' => 'Edit Booking'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.booking_delete', 'label' => 'Delete Booking'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.amenities_manage', 'label' => 'Manage Amenities'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.settings_manage', 'label' => 'Manage Settings'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.booking_payment_add', 'label' => 'Add booking payment'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.booking_payment_edit', 'label' => 'Edit booking payment'],
+                ['type' => 'checkbox', 'key' => 'shop.hms.booking_payment_delete', 'label' => 'Delete booking payment'],
+            ],
+        ],
+        [
+            'group'          => 'Manufacturing',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.manufacturing.recipe_view', 'label' => 'View Recipe'],
+                ['type' => 'checkbox', 'key' => 'shop.manufacturing.recipe_create', 'label' => 'Add Recipe'],
+                ['type' => 'checkbox', 'key' => 'shop.manufacturing.recipe_edit', 'label' => 'Edit Recipe'],
+                ['type' => 'checkbox', 'key' => 'shop.manufacturing.production_access', 'label' => 'Access Production'],
+            ],
+        ],
+        [
+            'group'          => 'Project',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.project.create', 'label' => 'Create Project'],
+                ['type' => 'checkbox', 'key' => 'shop.project.edit', 'label' => 'Edit Project'],
+                ['type' => 'checkbox', 'key' => 'shop.project.delete', 'label' => 'Delete Project'],
+            ],
+        ],
+        [
+            'group'          => 'Repair',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.repair.invoice_add', 'label' => 'Add Invoice'],
+                ['type' => 'checkbox', 'key' => 'shop.repair.invoice_edit', 'label' => 'Edit Invoice'],
+                [
+                    'type'    => 'radio',
+                    'name'    => 'repair_invoice_view',
+                    'options' => [
+                        ['key' => 'shop.repair.invoice_view_all', 'label' => 'View all invoice'],
+                        ['key' => 'shop.repair.invoice_view_own', 'label' => 'View own invoice'],
+                    ],
+                ],
+                ['type' => 'checkbox', 'key' => 'shop.repair.invoice_delete', 'label' => 'Delete Invoice'],
+                ['type' => 'checkbox', 'key' => 'shop.repair.invoice_status_change', 'label' => 'Change Invoice Status'],
+                ['type' => 'checkbox', 'key' => 'shop.repair.job_sheet_status_manage', 'label' => 'Add/Edit/Delete Job Sheet Status'],
+                ['type' => 'checkbox', 'key' => 'shop.repair.job_sheet_add', 'label' => 'Add job sheet'],
+                ['type' => 'checkbox', 'key' => 'shop.repair.job_sheet_edit', 'label' => 'Edit Job Sheet'],
+                ['type' => 'checkbox', 'key' => 'shop.repair.job_sheet_delete', 'label' => 'Delete Job Sheet'],
+                [
+                    'type'    => 'radio',
+                    'name'    => 'repair_jobsheet_view',
+                    'options' => [
+                        ['key' => 'shop.repair.job_sheet_view_assigned', 'label' => 'View Only Assigned Job Sheet'],
+                        ['key' => 'shop.repair.job_sheet_view_all', 'label' => 'View All Job Sheets'],
+                    ],
+                ],
+            ],
+        ],
+        [
+            'group'          => 'Spreadsheet',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.spreadsheet.access', 'label' => 'Access spreadsheet'],
+                ['type' => 'checkbox', 'key' => 'shop.spreadsheet.create', 'label' => 'Create spreadsheet'],
+            ],
+        ],
+        [
+            'group'          => 'Superadmin',
+            'has_select_all' => false,
+            'default_keys'   => ['shop.superadmin.package_subscriptions_access'],
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.superadmin.package_subscriptions_access', 'label' => 'Access package subscriptions'],
+            ],
+        ],
+        [
+            'group'          => 'Woocommerce',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.woocommerce.sync_categories', 'label' => 'Sync Product Categories'],
+                ['type' => 'checkbox', 'key' => 'shop.woocommerce.sync_products', 'label' => 'Sync Products'],
+                ['type' => 'checkbox', 'key' => 'shop.woocommerce.sync_orders', 'label' => 'Sync Orders'],
+                ['type' => 'checkbox', 'key' => 'shop.woocommerce.map_tax_rates', 'label' => 'Map Tax Rates'],
+                ['type' => 'checkbox', 'key' => 'shop.woocommerce.api_settings_access', 'label' => 'Access Woocommerce API settings'],
+            ],
+        ],
+        [
+            'group'          => 'ZatcaIntegrationKsa',
+            'has_select_all' => false,
+            'items'          => [
+                ['type' => 'checkbox', 'key' => 'shop.zatca.module_access', 'label' => 'Access Zatca Module'],
+                ['type' => 'checkbox', 'key' => 'shop.zatca.onboarding_system', 'label' => 'Onboarding Screen'],
+                ['type' => 'checkbox', 'key' => 'shop.zatca.sales', 'label' => 'Sales'],
+                ['type' => 'checkbox', 'key' => 'shop.zatca.sales_return', 'label' => 'Sales Return'],
+            ],
         ],
     ],
 ];

@@ -96,6 +96,7 @@ class UserController extends Controller
             'agents'            => $agents,
             'businesses'        => $businesses,
             'permission_groups' => $permissionGroups,
+            'permission_layout' => config('shop_permissions.layout', []),
             'filters'           => $request->only(['search', 'tab']),
         ]);
     }

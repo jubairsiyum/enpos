@@ -72,6 +72,7 @@ class RoleController extends Controller
     public function create(): Response
     {
         return Inertia::render('Shop/Roles/Create', [
+            'permission_layout' => config('shop_permissions.layout', []),
             'permission_groups' => config('shop_permissions.groups', []),
         ]);
     }
@@ -142,6 +143,7 @@ class RoleController extends Controller
                 'is_system'   => is_null($role->business_id),
                 'permissions' => $role->permissions->pluck('name')->toArray(),
             ],
+            'permission_layout' => config('shop_permissions.layout', []),
             'permission_groups' => config('shop_permissions.groups', []),
         ]);
     }

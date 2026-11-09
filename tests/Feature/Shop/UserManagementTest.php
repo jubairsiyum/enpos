@@ -23,6 +23,8 @@ class UserManagementTest extends TestCase
     {
         parent::setUp();
 
+        $this->seed(\Database\Seeders\PermissionSeeder::class);
+
         $plan = Plan::create([
             'name'          => 'Pro Plan',
             'slug'          => 'pro',
@@ -161,6 +163,35 @@ class UserManagementTest extends TestCase
             'name'        => 'Store Manager',
             'business_id' => $this->businessA->id,
         ]);
+    }
+
+    public function test_role_with_radio_and_checkbox_permissions_persists_correctly(): void
+    {
+        $response = $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/roles', [
+                'name'        => 'Cashier With Limited View',
+                'permissions' => [
+                    'shop.suppliers.view_own',
+                    'shop.customers.view_all',
+                    'shop.customers.view_no_sell_1m',
+                    'shop.customers.create',
+                    'shop.pos.view',
+                    'shop.pos.create',
+                ],
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.name', 'Cashier With Limited View');
+
+        $role = Role::where('name', 'Cashier With Limited View')
+            ->where('business_id', $this->businessA->id)
+            ->first();
+
+        $this->assertNotNull($role);
+        $this->assertTrue($role->hasPermissionTo('shop.suppliers.view_own'));
+        $this->assertTrue($role->hasPermissionTo('shop.customers.view_all'));
+        $this->assertTrue($role->hasPermissionTo('shop.pos.create'));
     }
 
     public function test_sales_commission_agent_crud(): void
