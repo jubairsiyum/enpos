@@ -76,6 +76,13 @@ class ResolveBusiness
                 ->first();
         }
 
+        // 5. SuperAdmin access fallback: allows SuperAdmin to access the POS shop directly
+        if (($user = $request->user()) && ($user->isSuperAdmin() || $user->isPlatformAdmin())) {
+            return Business::withoutGlobalScope('business')
+                ->with('activeSubscription')
+                ->first();
+        }
+
         return null;
     }
 }

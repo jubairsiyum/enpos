@@ -35,11 +35,7 @@ class SessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(
-            $request->user()->isPlatformUser()
-                ? route('platform.dashboard')
-                : route('shop.dashboard')
-        );
+        return redirect()->intended(route('shop.users.index'));
     }
 
     public function destroy(Request $request): RedirectResponse

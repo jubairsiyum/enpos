@@ -381,6 +381,10 @@ class UserController extends Controller
 
     private function authorizeBusinessUser(User $user): void
     {
+        if (auth()->user()?->isSuperAdmin()) {
+            return;
+        }
+
         if ((int) $user->business_id !== (int) $this->currentBusiness->id()) {
             abort(404, 'User not found for this shop.');
         }

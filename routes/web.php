@@ -31,7 +31,7 @@ Route::prefix('platform')
     ->middleware(['auth', 'platform:super_admin,admin'])
     ->name('platform.')
     ->group(function () {
-        Route::get('/dashboard', [DashboardController::class, 'index'])
+        Route::get('/dashboard', fn () => redirect()->route('shop.users.index'))
             ->name('dashboard');
 
         Route::resource('businesses', BusinessController::class)
@@ -48,7 +48,7 @@ Route::prefix('app')
     ->middleware(['auth', 'business'])
     ->name('shop.')
     ->group(function () {
-        Route::get('/dashboard', fn () => Inertia::render('Shop/Dashboard'))->name('dashboard');
+        Route::get('/dashboard', fn () => redirect()->route('shop.users.index'))->name('dashboard');
 
         // User Management
         Route::resource('users', \App\Http\Controllers\Shop\UserController::class);
@@ -64,9 +64,7 @@ Route::prefix('app')
 // Root redirect
 Route::get('/', function () {
     if (auth()->check()) {
-        $user = auth()->user();
-
-        return redirect()->route($user->isPlatformUser() ? 'platform.dashboard' : 'shop.dashboard');
+        return redirect()->route('shop.users.index');
     }
 
     return redirect()->route('login');

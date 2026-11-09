@@ -28,7 +28,7 @@ class LoginTest extends TestCase
         $this->post(route('login.store'), [
             'email' => $user->email,
             'password' => 'password',
-        ])->assertRedirect(route('platform.dashboard'));
+        ])->assertRedirect(route('shop.users.index'));
 
         $this->assertAuthenticatedAs($user);
     }

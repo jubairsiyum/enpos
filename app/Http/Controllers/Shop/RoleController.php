@@ -195,6 +195,10 @@ class RoleController extends Controller
 
     private function authorizeBusinessRole(Role $role): void
     {
+        if (auth()->user()?->isSuperAdmin()) {
+            return;
+        }
+
         $businessId = $this->currentBusiness->id();
 
         if (! is_null($role->business_id) && (int) $role->business_id !== (int) $businessId) {

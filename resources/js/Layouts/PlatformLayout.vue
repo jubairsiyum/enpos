@@ -34,11 +34,29 @@ const sidebarOpen = ref(false)
                     :href="route(link.href)"
                     class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-primary-200
                            hover:bg-primary-800 hover:text-white transition"
-                    :class="{ 'bg-primary-800 text-white': $page.url.startsWith('/platform/' + link.label.toLowerCase()) }"
+                    :class="{ 'bg-primary-800 text-white': page.url?.startsWith('/platform/' + link.label.toLowerCase()) }"
                 >
                     <span class="text-base">{{ link.icon }}</span>
                     {{ link.label }}
                 </Link>
+
+                <div class="pt-4 mt-4 border-t border-primary-800">
+                    <p class="px-3 text-[10px] font-semibold uppercase tracking-wider text-primary-400 mb-2">POS Workspace</p>
+                    <Link
+                        :href="route('shop.dashboard')"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-primary-200 hover:bg-primary-800 hover:text-white transition"
+                    >
+                        <span class="text-base">🖥️</span>
+                        POS App
+                    </Link>
+                    <Link
+                        :href="route('shop.users.index')"
+                        class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-primary-200 hover:bg-primary-800 hover:text-white transition"
+                    >
+                        <span class="text-base">👥</span>
+                        User Management
+                    </Link>
+                </div>
             </nav>
 
             <!-- User info -->
@@ -62,10 +80,16 @@ const sidebarOpen = ref(false)
         <!-- Main content -->
         <div class="flex-1 flex flex-col min-w-0">
             <!-- Top bar -->
-            <header class="h-16 bg-white shadow-sm flex items-center px-6">
+            <header class="h-16 bg-white shadow-sm flex items-center justify-between px-6">
                 <slot name="header">
                     <h1 class="text-lg font-semibold text-gray-900">Platform Admin</h1>
                 </slot>
+                <Link
+                    :href="route('shop.dashboard')"
+                    class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition"
+                >
+                    <span>🖥️</span> Open POS App
+                </Link>
             </header>
 
             <!-- Page content -->

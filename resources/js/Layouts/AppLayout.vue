@@ -6,8 +6,6 @@ const page = usePage()
 const user = computed(() => page.props.auth?.user)
 const business = computed(() => page.props.auth?.business)
 
-const modules = computed(() => page.props.enabledModules ?? [])
-
 const openSubmenus = ref({
     user_management: true,
 })
@@ -16,130 +14,112 @@ const toggleSubmenu = (module) => {
     openSubmenus.value[module] = !openSubmenus.value[module]
 }
 
-const allNavLinks = [
-    { label: 'Home', module: 'home', icon: '🏠', href: 'shop.dashboard' },
-    {
-        label: 'User Management',
-        module: 'user_management',
-        icon: '👥',
-        children: [
-            { label: 'Users', href: 'shop.users.index' },
-            { label: 'Roles', href: 'shop.roles.index' },
-            { label: 'Sales Commission Agent', href: 'shop.sales-commission-agents.index' },
-        ],
-    },
-    { label: 'Contacts',              module: 'contacts',               icon: '📇', href: 'shop.contacts.index' },
-    { label: 'Products',              module: 'products',               icon: '📦', href: 'shop.products.index' },
-    { label: 'Purchases',             module: 'purchases',              icon: '🛒', href: 'shop.purchases.index' },
-    { label: 'Sell',                  module: 'sell',                   icon: '💰', href: 'shop.sells.index' },
-    { label: 'POS',                   module: 'pos',                    icon: '🖥️', href: 'shop.pos' },
-    { label: 'Stock Transfers',       module: 'stock_transfers',        icon: '🔄', href: 'shop.stock-transfers.index' },
-    { label: 'Stock Adjustment',      module: 'stock_adjustment',       icon: '⚖️', href: 'shop.stock-adjustments.index' },
-    { label: 'Expenses',              module: 'expenses',               icon: '💸', href: 'shop.expenses.index' },
-    { label: 'Payment Accounts',      module: 'payment_accounts',       icon: '🏦', href: 'shop.accounts.index' },
-    { label: 'Reports',               module: 'reports',                icon: '📊', href: 'shop.reports.profit-loss' },
-    { label: 'Notifications',         module: 'notification_templates', icon: '🔔', href: 'shop.notifications.index' },
-    { label: 'Settings',              module: 'settings',               icon: '⚙️', href: 'shop.settings.index' },
-    { label: 'HRM',                   module: 'hrm',                    icon: '🏢', href: 'shop.hrm.employees.index' },
-    { label: 'Essentials',            module: 'essentials',             icon: '⭐', href: 'shop.essentials.todos.index' },
-    { label: 'Cheque',                module: 'cheque',                 icon: '🗒️', href: 'shop.cheques.index' },
-    { label: 'Woocommerce',           module: 'woocommerce',            icon: '🛍️', href: 'shop.woocommerce.settings' },
+const userManagementLinks = [
+    { label: 'Users', href: 'shop.users.index', pattern: '/app/users', icon: '👤' },
+    { label: 'Roles', href: 'shop.roles.index', pattern: '/app/roles', icon: '🛡️' },
+    { label: 'Sales Commission Agent', href: 'shop.sales-commission-agents.index', pattern: '/app/sales-commission-agents', icon: '💼' },
 ]
 
-// Core modules always show; optional only if enabled
-const coreModules = [
-    'home','user_management','contacts','products','purchases','sell','pos',
-    'stock_transfers','stock_adjustment','expenses','payment_accounts',
-    'reports','notification_templates','settings',
-]
-
-const navLinks = computed(() =>
-    allNavLinks.filter(l =>
-        coreModules.includes(l.module) || modules.value.includes(l.module)
-    )
-)
+const isChildActive = (pattern) => {
+    return page.url?.startsWith(pattern)
+}
 </script>
 
 <template>
     <div class="min-h-screen bg-gray-50 flex">
         <!-- Sidebar -->
-        <aside class="w-60 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-y-auto">
+        <aside class="w-64 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-y-auto">
             <!-- Brand -->
-            <div class="h-14 flex items-center px-5 border-b border-gray-100">
-                <span class="font-bold text-primary-700 text-lg">{{ business?.name ?? 'enPOS' }}</span>
+            <div class="h-16 flex items-center justify-between px-5 border-b border-gray-100 bg-indigo-900 text-white">
+                <div class="flex items-center gap-2">
+                    <span class="font-extrabold text-xl tracking-tight text-white">enPOS</span>
+                    <span class="text-[10px] font-semibold bg-indigo-700 text-indigo-200 rounded px-1.5 py-0.5">Admin</span>
+                </div>
             </div>
 
             <!-- Nav -->
-            <nav class="flex-1 py-3 px-2 space-y-0.5">
-                <template v-for="link in navLinks" :key="link.module">
-                    <!-- Item with submenu -->
-                    <div v-if="link.children">
-                        <button
-                            type="button"
-                            @click="toggleSubmenu(link.module)"
-                            class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-sm text-gray-700
-                                   hover:bg-primary-50 hover:text-primary-700 transition"
-                        >
-                            <span class="flex items-center gap-2.5">
-                                <span>{{ link.icon }}</span>
-                                <span class="font-medium">{{ link.label }}</span>
-                            </span>
-                            <span class="text-xs transition-transform duration-200" :class="{ 'rotate-90': openSubmenus[link.module] }">
-                                ▶
-                            </span>
-                        </button>
-
-                        <div v-show="openSubmenus[link.module]" class="pl-8 pr-2 py-1 space-y-0.5">
-                            <Link
-                                v-for="child in link.children"
-                                :key="child.href"
-                                :href="route(child.href)"
-                                class="block px-2.5 py-1.5 rounded-md text-xs text-gray-600 hover:text-primary-700 hover:bg-gray-100 transition"
-                            >
-                                {{ child.label }}
-                            </Link>
-                        </div>
+            <nav class="flex-1 py-4 px-3 space-y-2">
+                <!-- User Management Section (Primary) -->
+                <div>
+                    <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-indigo-50 text-indigo-900 font-semibold text-sm">
+                        <span class="flex items-center gap-2.5">
+                            <span class="text-base">👥</span>
+                            <span>User Management</span>
+                        </span>
+                        <span class="text-xs text-indigo-600 font-bold">Active</span>
                     </div>
 
-                    <!-- Single link -->
-                    <Link
-                        v-else
-                        :href="route(link.href)"
-                        class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm text-gray-600
-                               hover:bg-primary-50 hover:text-primary-700 transition"
-                    >
-                        <span>{{ link.icon }}</span>
-                        <span>{{ link.label }}</span>
-                    </Link>
-                </template>
+                    <!-- Sub-pages -->
+                    <div class="mt-2 pl-3 pr-1 space-y-1">
+                        <Link
+                            v-for="child in userManagementLinks"
+                            :key="child.href"
+                            :href="route(child.href)"
+                            class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition"
+                            :class="isChildActive(child.pattern)
+                                ? 'bg-indigo-600 text-white font-medium shadow-sm'
+                                : 'text-gray-700 hover:bg-gray-100 hover:text-indigo-600'"
+                        >
+                            <span>{{ child.icon }}</span>
+                            <span>{{ child.label }}</span>
+                        </Link>
+                    </div>
+                </div>
             </nav>
 
-            <!-- User -->
-            <div class="p-3 border-t border-gray-100">
-                <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold">
-                        {{ user?.name?.charAt(0)?.toUpperCase() }}
+            <!-- User Footer -->
+            <div class="p-3 border-t border-gray-100 bg-gray-50">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-full bg-indigo-600 text-white flex items-center justify-center text-sm font-bold shadow-sm">
+                        {{ user?.name?.charAt(0)?.toUpperCase() ?? 'U' }}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-xs font-medium text-gray-800 truncate">{{ user?.name }}</p>
-                        <p class="text-xs text-gray-400 capitalize">{{ user?.type }}</p>
+                        <p class="text-xs font-semibold text-gray-900 truncate">{{ user?.name }}</p>
+                        <span class="inline-block text-[10px] font-medium px-1.5 py-0.2 rounded bg-indigo-100 text-indigo-800 capitalize">
+                            {{ user?.type ?? 'SuperAdmin' }}
+                        </span>
                     </div>
-                    <Link :href="route('logout')" method="post" as="button"
-                          class="text-gray-400 hover:text-gray-700 text-xs transition">
+                    <Link
+                        :href="route('logout')"
+                        method="post"
+                        as="button"
+                        title="Logout"
+                        class="p-1.5 text-gray-400 hover:text-red-600 hover:bg-white rounded transition"
+                    >
                         ⏻
                     </Link>
                 </div>
             </div>
         </aside>
 
-        <!-- Content -->
+        <!-- Main Content Area -->
         <div class="flex-1 flex flex-col min-w-0">
-            <header class="h-14 bg-white border-b border-gray-200 flex items-center px-6">
-                <slot name="header">
-                    <h1 class="text-base font-semibold text-gray-900">Dashboard</h1>
-                </slot>
+            <!-- Top Header with Quick Sub-Navigation Pills -->
+            <header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+                <!-- Quick Navigation Pills for instant testing -->
+                <div class="flex items-center gap-2">
+                    <Link
+                        v-for="child in userManagementLinks"
+                        :key="child.href"
+                        :href="route(child.href)"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition"
+                        :class="isChildActive(child.pattern)
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+                    >
+                        <span>{{ child.icon }}</span>
+                        <span>{{ child.label }}</span>
+                    </Link>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <span class="text-xs text-gray-500">
+                        Store: <strong class="text-gray-700">{{ business?.name ?? 'Main Business' }}</strong>
+                    </span>
+                </div>
             </header>
-            <main class="flex-1 p-6">
+
+            <main class="flex-1 p-6 bg-gray-50 overflow-y-auto">
                 <slot />
             </main>
         </div>
