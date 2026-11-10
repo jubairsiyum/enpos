@@ -1,13 +1,20 @@
 <script setup>
+import { ref } from 'vue'
 import { useForm, Head, Link } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
+import InfoTooltip from '@/Components/InfoTooltip.vue'
 
 defineOptions({ layout: AppLayout })
 
 const props = defineProps({
     roles: { type: Array, default: () => [] },
     locations: { type: Array, default: () => [] },
+    departments: { type: Array, default: () => [] },
+    designations: { type: Array, default: () => [] },
+    contacts: { type: Array, default: () => [] },
 })
+
+const successMessage = ref('')
 
 const form = useForm({
     prefix: '',
@@ -15,6 +22,8 @@ const form = useForm({
     last_name: '',
     email: '',
     is_active: true,
+    enable_service_staff_pin: false,
+    staff_pin: '',
     allow_login: true,
     username: '',
     password: '',
@@ -59,25 +68,36 @@ const form = useForm({
         tax_payer_id: '',
     },
 
-    // HRM & Payroll
+    // HRM Details & Payroll
     hrm_details: {
         department: '',
         designation: '',
         primary_work_location: '',
         basic_salary: '',
-        pay_cycle: '',
+        pay_cycle: 'Per Month',
+        pay_components: '',
     },
 })
 
 const submit = () => {
-    form.post(route('shop.users.store'))
+    form.post(route('shop.users.store'), {
+        preserveScroll: false,
+        onSuccess: () => {
+            form.reset()
+            form.clearErrors()
+            successMessage.value = 'User created successfully and stored in database.'
+            setTimeout(() => {
+                successMessage.value = ''
+            }, 6000)
+        },
+    })
 }
 </script>
 
 <template>
     <Head title="Add user" />
 
-    <div class="max-w-7xl mx-auto space-y-6">
+    <div class="max-w-7xl mx-auto space-y-6 pb-12">
         <div class="flex items-center justify-between">
             <h1 class="text-xl font-bold text-gray-900">Add user</h1>
             <Link :href="route('shop.users.index')" class="text-xs text-indigo-600 hover:underline">
@@ -85,199 +105,294 @@ const submit = () => {
             </Link>
         </div>
 
+        <!-- Success Alert -->
+        <div v-if="$page.props.flash?.success || successMessage" class="bg-green-50 border border-green-200 text-green-800 text-xs rounded-lg p-4 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-2">
+                <span class="text-green-600 font-bold text-sm">✓</span>
+                <span class="font-medium">{{ $page.props.flash?.success || successMessage }}</span>
+            </div>
+            <button type="button" @click="successMessage = ''; if ($page.props.flash) $page.props.flash.success = null" class="text-green-600 hover:text-green-800 text-xs font-bold">✕</button>
+        </div>
+
+        <!-- Global Validation Error Alert -->
+        <div v-if="Object.keys(form.errors).length > 0" class="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-4 space-y-1 shadow-sm">
+            <div class="font-bold flex items-center gap-2 text-sm text-red-800">
+                <span>⚠</span>
+                <span>Please fix the following errors:</span>
+            </div>
+            <ul class="list-disc list-inside space-y-0.5 pl-2 text-[11px]">
+                <li v-for="(err, key) in form.errors" :key="key">{{ err }}</li>
+            </ul>
+        </div>
+
         <form @submit.prevent="submit" class="space-y-6">
-            <!-- Basic User Info Card -->
+            <!-- Section 1: Basic User Info Card -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Prefix:</label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Prefix:</label>
                         <input
                             v-model="form.prefix"
                             type="text"
                             placeholder="Mr / Mrs / Miss"
-                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
                         />
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">First Name:*</label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">First Name:*</label>
                         <input
                             v-model="form.first_name"
                             type="text"
                             required
                             placeholder="First Name"
-                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
                         />
                         <p v-if="form.errors.first_name" class="text-xs text-red-500 mt-0.5">{{ form.errors.first_name }}</p>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Last Name:</label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Last Name:</label>
                         <input
                             v-model="form.last_name"
                             type="text"
                             placeholder="Last Name"
-                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
                         />
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Email:*</label>
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    <div class="md:col-span-4">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Email:*</label>
                         <input
                             v-model="form.email"
                             type="email"
                             required
                             placeholder="Email"
-                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
                         />
                         <p v-if="form.errors.email" class="text-xs text-red-500 mt-0.5">{{ form.errors.email }}</p>
                     </div>
 
-                    <div class="flex items-center gap-6 md:pt-5">
+                    <div class="md:col-span-2 flex items-center md:pt-4">
                         <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
                             <input
                                 v-model="form.is_active"
                                 type="checkbox"
                                 class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                             />
-                            Is active?
+                            <span>Is active ?</span>
+                            <InfoTooltip text="Activate or deactivate user login and system access." />
                         </label>
+                    </div>
 
+                    <div class="md:col-span-3 flex items-center md:pt-4">
                         <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
                             <input
-                                v-model="form.allow_login"
+                                v-model="form.enable_service_staff_pin"
                                 type="checkbox"
                                 class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                             />
-                            Allow login
+                            <span>Enable service staff pin</span>
+                            <InfoTooltip text="Enable quick PIN authentication for POS service staff." />
                         </label>
+                    </div>
+
+                    <!-- Staff pin input only visible when Enable service staff pin is checked -->
+                    <div v-if="form.enable_service_staff_pin" class="md:col-span-3">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Staff Pin:</label>
+                        <input
+                            v-model="form.staff_pin"
+                            type="text"
+                            autocomplete="off"
+                            placeholder="Staff Pin"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
+                        />
                     </div>
                 </div>
             </div>
 
-            <!-- Roles and Permissions Card -->
+            <!-- Section 2: Roles and Permissions Card -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-                <h2 class="text-sm font-semibold text-gray-900 border-b border-gray-100 pb-2">Roles and Permissions</h2>
+                <h2 class="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Roles and Permissions</h2>
+
+                <div>
+                    <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                        <input
+                            v-model="form.allow_login"
+                            type="checkbox"
+                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span>Allow login</span>
+                    </label>
+                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Username:</label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Username:</label>
                         <input
                             v-model="form.username"
                             type="text"
                             placeholder="Username"
-                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
                         />
-                        <p class="text-[10px] text-gray-400 mt-0.5">Leave blank to auto generate username</p>
+                        <p class="text-[11px] text-gray-400 mt-1">Leave blank to auto generate username</p>
                         <p v-if="form.errors.username" class="text-xs text-red-500 mt-0.5">{{ form.errors.username }}</p>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Password:*</label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Password:*</label>
                         <input
                             v-model="form.password"
                             type="password"
-                            required
+                            :required="form.allow_login"
                             placeholder="Password"
-                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
                         />
                         <p v-if="form.errors.password" class="text-xs text-red-500 mt-0.5">{{ form.errors.password }}</p>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Confirm Password:*</label>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Confirm Password:*</label>
                         <input
                             v-model="form.password_confirmation"
                             type="password"
-                            required
+                            :required="form.allow_login"
                             placeholder="Confirm Password"
-                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
                         />
+                        <p v-if="form.errors.password_confirmation" class="text-xs text-red-500 mt-0.5">{{ form.errors.password_confirmation }}</p>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="space-y-4 pt-1">
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Role:*</label>
+                        <div class="flex items-center gap-1 mb-1">
+                            <label class="text-xs font-semibold text-gray-700">Role:*</label>
+                            <InfoTooltip text="Assign role to specify functional permissions for this user." />
+                        </div>
                         <select
                             v-model="form.role"
+                            required
                             class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500"
+                            :class="form.role ? 'text-gray-700' : 'text-gray-400'"
                         >
-                            <option value="">Select Role</option>
-                            <option v-for="r in roles" :key="r.id" :value="r.name">{{ r.name }}</option>
+                            <option value="" disabled selected hidden>Select Role</option>
+                            <option value="super_admin" class="text-gray-700">Superadmin</option>
+                            <option value="admin" class="text-gray-700">Admin</option>
+                            <option value="owner" class="text-gray-700">Shop Owners</option>
                         </select>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Access locations:</label>
-                        <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer mb-2">
-                            <input
-                                v-model="form.access_all_locations"
-                                type="checkbox"
-                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            All Locations
-                        </label>
-                        <div v-if="!form.access_all_locations" class="grid grid-cols-2 gap-2 p-2 border border-gray-200 rounded max-h-32 overflow-y-auto">
-                            <label v-for="loc in locations" :key="loc.id" class="flex items-center gap-1.5 text-xs text-gray-600">
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-1">
+                            <span class="text-xs font-semibold text-gray-700">Access locations</span>
+                            <InfoTooltip text="Locations to which this user will have operational access." />
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
                                 <input
+                                    v-model="form.access_all_locations"
                                     type="checkbox"
-                                    :value="loc.id"
-                                    v-model="form.access_locations"
-                                    class="rounded border-gray-300 text-indigo-600"
+                                    class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                                 />
-                                {{ loc.name }}
+                                <span>All Locations</span>
+                                <InfoTooltip text="Grants permission to operate across all present and future locations." />
                             </label>
+
+                            <div class="space-y-1 pl-4" v-if="!form.access_all_locations">
+                                <label v-for="loc in locations" :key="loc.id" class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        :value="loc.id"
+                                        v-model="form.access_locations"
+                                        class="rounded border-gray-300 text-indigo-600"
+                                    />
+                                    <span>{{ loc.name }}</span>
+                                </label>
+                            </div>
+                            <div v-else class="pl-4">
+                                <label v-for="loc in locations" :key="loc.id" class="flex items-center gap-2 text-xs text-gray-700 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked
+                                        disabled
+                                        class="rounded border-gray-300 text-indigo-600 opacity-60"
+                                    />
+                                    <span>{{ loc.name }}</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Sales Card -->
+            <!-- Section 3: Sales Card -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-                <h2 class="text-sm font-semibold text-gray-900 border-b border-gray-100 pb-2">Sales</h2>
+                <h2 class="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Sales</h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Sales Commission Percentage (%):</label>
+                        <div class="flex items-center gap-1 mb-1">
+                            <label class="text-xs font-semibold text-gray-700">Sales Commission Percentage (%):</label>
+                            <InfoTooltip text="Commission percentage earned by this user on completed sales transactions." />
+                        </div>
                         <input
                             v-model="form.commission_rate"
                             type="number"
                             step="0.01"
                             placeholder="Sales Commission Percentage (%)"
-                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
                         />
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Max sales discount percent:</label>
+                        <div class="flex items-center gap-1 mb-1">
+                            <label class="text-xs font-semibold text-gray-700">Max sales discount percent:</label>
+                            <InfoTooltip text="Maximum discount percentage this user is authorized to give on sales." />
+                        </div>
                         <input
                             v-model="form.max_sales_discount"
                             type="number"
                             step="0.01"
                             placeholder="Max sales discount percent"
-                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
                         />
                     </div>
                 </div>
 
-                <div>
-                    <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
-                        <input
-                            v-model="form.allow_selected_contacts"
-                            type="checkbox"
-                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                        />
-                        Allow Selected Contacts
-                    </label>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <div>
+                        <label class="flex items-center gap-2 text-xs font-medium text-gray-700 cursor-pointer">
+                            <input
+                                v-model="form.allow_selected_contacts"
+                                type="checkbox"
+                                class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <span>Allow Selected Contacts</span>
+                            <InfoTooltip text="Restrict POS and sell operations to selected contacts only." />
+                        </label>
+                    </div>
+
+                    <!-- Select Contacts input field only visible when Allow Selected Contacts is checked -->
+                    <div v-if="form.allow_selected_contacts">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Select Contacts:</label>
+                        <select
+                            v-model="form.selected_contacts"
+                            multiple
+                            class="w-full border border-gray-300 rounded px-3 py-1 text-xs focus:ring-indigo-500 focus:border-indigo-500 h-9"
+                        >
+                            <option v-for="c in contacts" :key="c.id" :value="c.id">{{ c.name }}</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <!-- More Information Card -->
+            <!-- Section 4: More Information Card (Always Open) -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-                <h2 class="text-sm font-semibold text-gray-900 border-b border-gray-100 pb-2">More Information</h2>
+                <h2 class="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">More Information</h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
@@ -388,9 +503,9 @@ const submit = () => {
                 </div>
             </div>
 
-            <!-- Bank Details Card -->
+            <!-- Section 5: Bank Details Card (Always Open) -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-                <h2 class="text-sm font-semibold text-gray-900 border-b border-gray-100 pb-2">Bank Details</h2>
+                <h2 class="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Bank Details</h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
@@ -423,54 +538,90 @@ const submit = () => {
                 </div>
             </div>
 
-            <!-- HRM & Payroll Card -->
+            <!-- Section 6: HRM Details Card (Image 2) -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
-                <h2 class="text-sm font-semibold text-gray-900 border-b border-gray-100 pb-2">HRM Details & Payroll</h2>
+                <h2 class="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">HRM Details</h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Department:</label>
-                        <input v-model="form.hrm_details.department" type="text" placeholder="Department" class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs" />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Designation:</label>
-                        <input v-model="form.hrm_details.designation" type="text" placeholder="Designation" class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs" />
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Primary work location:</label>
-                        <select v-model="form.hrm_details.primary_work_location" class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Department:</label>
+                        <select
+                            v-model="form.hrm_details.department"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
+                        >
                             <option value="">Please Select</option>
-                            <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+                            <option v-for="dept in departments" :key="dept.id" :value="dept.name">{{ dept.name }}</option>
                         </select>
                     </div>
+
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Basic salary:</label>
-                        <input v-model="form.hrm_details.basic_salary" type="number" step="0.01" placeholder="Basic salary" class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs" />
-                    </div>
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Pay cycle:</label>
-                        <select v-model="form.hrm_details.pay_cycle" class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Designation:</label>
+                        <select
+                            v-model="form.hrm_details.designation"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
+                        >
                             <option value="">Please Select</option>
-                            <option value="monthly">Monthly</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="daily">Daily</option>
+                            <option v-for="des in designations" :key="des.id" :value="des.name">{{ des.name }}</option>
                         </select>
                     </div>
                 </div>
             </div>
 
-            <!-- Submit Button -->
-            <div class="flex items-center justify-end gap-3">
-                <Link :href="route('shop.users.index')" class="px-4 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50">
-                    Cancel
-                </Link>
+            <!-- Section 7: Payroll Card (Image 2) -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+                <h2 class="text-sm font-bold text-gray-900 border-b border-gray-100 pb-2">Payroll</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Primary work location:</label>
+                        <select
+                            v-model="form.hrm_details.primary_work_location"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 text-gray-700"
+                        >
+                            <option value="">Please Select</option>
+                            <option v-for="loc in locations" :key="loc.id" :value="loc.id">{{ loc.name }}</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Basic salary:</label>
+                        <div class="flex">
+                            <input
+                                v-model="form.hrm_details.basic_salary"
+                                type="number"
+                                step="0.01"
+                                placeholder="Basic salary"
+                                class="w-full border border-gray-300 rounded-l px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
+                            />
+                            <select
+                                v-model="form.hrm_details.pay_cycle"
+                                class="border border-l-0 border-gray-300 rounded-r px-2.5 py-1.5 text-xs bg-gray-50 focus:ring-indigo-500 focus:border-indigo-500 text-gray-700 whitespace-nowrap min-w-[105px]"
+                            >
+                                <option value="Per Month">Per Month</option>
+                                <option value="Per Week">Per Week</option>
+                                <option value="Per Day">Per Day</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Pay Components:</label>
+                        <input
+                            v-model="form.hrm_details.pay_components"
+                            type="text"
+                            placeholder="Pay Components"
+                            class="w-full border border-gray-300 rounded px-3 py-1.5 text-xs focus:ring-indigo-500 focus:border-indigo-500 placeholder-gray-400"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Save Action Button matching Image 2 centered layout -->
+            <div class="flex justify-center pt-2">
                 <button
                     type="submit"
                     :disabled="form.processing"
-                    class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-lg shadow-sm transition disabled:opacity-50"
+                    class="px-8 py-2.5 bg-[#4f2bed] hover:bg-[#4323d4] text-white text-sm font-semibold rounded-md shadow transition disabled:opacity-50"
                 >
                     Save
                 </button>

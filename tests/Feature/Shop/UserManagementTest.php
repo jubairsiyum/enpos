@@ -116,6 +116,111 @@ class UserManagementTest extends TestCase
         ]);
     }
 
+    public function test_user_can_be_created_with_service_staff_pin_and_hrm_details(): void
+    {
+        $response = $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/users', [
+                'prefix'                   => 'Mr',
+                'first_name'               => 'Alex',
+                'last_name'                => 'Turner',
+                'email'                    => 'alex.turner@example.test',
+                'username'                 => 'alexturner',
+                'password'                 => 'password123',
+                'password_confirmation'    => 'password123',
+                'is_active'                => true,
+                'enable_service_staff_pin' => true,
+                'staff_pin'                => '4321',
+                'allow_login'              => true,
+                'hrm_details'              => [
+                    'department'            => 'Sales & Marketing',
+                    'designation'           => 'Sales Lead',
+                    'primary_work_location' => 'Main Store',
+                    'basic_salary'          => 4500.00,
+                    'pay_cycle'             => 'Per Month',
+                    'pay_components'        => 'Standard Bonus',
+                ],
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.email', 'alex.turner@example.test')
+            ->assertJsonPath('data.enable_service_staff_pin', true)
+            ->assertJsonPath('data.staff_pin', '4321');
+
+        $this->assertDatabaseHas('users', [
+            'email'                    => 'alex.turner@example.test',
+            'enable_service_staff_pin' => true,
+            'staff_pin'                => '4321',
+            'business_id'              => $this->businessA->id,
+        ]);
+
+        $user = User::where('email', 'alex.turner@example.test')->first();
+        $this->assertEquals('Sales & Marketing', $user->hrm_details['department']);
+        $this->assertEquals('Per Month', $user->hrm_details['pay_cycle']);
+    }
+
+    public function test_user_can_be_assigned_partitioned_roles_superadmin_admin_and_owner(): void
+    {
+        $rolesToTest = [
+            'super_admin' => 'super_admin',
+            'admin'       => 'admin',
+            'owner'       => 'owner',
+        ];
+
+        foreach ($rolesToTest as $roleKey => $expectedType) {
+            $email = "user-{$roleKey}@example.test";
+            $response = $this->actingAs($this->ownerA)
+                ->withHeader('X-Business', (string) $this->businessA->id)
+                ->postJson('/api/v1/shop/users', [
+                    'prefix'                => 'Mr',
+                    'first_name'            => 'Role',
+                    'last_name'             => $roleKey,
+                    'email'                 => $email,
+                    'username'              => "user_{$roleKey}",
+                    'password'              => 'password123',
+                    'password_confirmation' => 'password123',
+                    'role'                  => $roleKey,
+                    'is_active'             => true,
+                    'allow_login'           => true,
+                ]);
+
+            $response->assertCreated();
+
+            $user = User::where('email', $email)->first();
+            $this->assertNotNull($user);
+            $this->assertEquals($expectedType, $user->type);
+
+            setPermissionsTeamId($this->businessA->id);
+            $this->assertTrue($user->hasRole($roleKey));
+        }
+    }
+
+    public function test_web_user_create_form_stores_to_database_and_redirects_back_with_flash_success(): void
+    {
+        $response = $this->actingAs($this->ownerA)
+            ->from('/app/users/create')
+            ->post('/app/users', [
+                'prefix'                => 'Ms',
+                'first_name'            => 'Sarah',
+                'last_name'             => 'Connor',
+                'email'                 => 'sarah.connor@example.test',
+                'username'              => 'sarahconnor',
+                'password'              => 'terminator123',
+                'password_confirmation' => 'terminator123',
+                'is_active'             => true,
+                'allow_login'           => true,
+            ]);
+
+        $response->assertRedirect('/app/users/create')
+            ->assertSessionHas('success');
+
+        $this->assertDatabaseHas('users', [
+            'email'       => 'sarah.connor@example.test',
+            'business_id' => $this->businessA->id,
+            'name'        => 'Ms Sarah Connor',
+        ]);
+    }
+
     public function test_user_creation_validates_required_fields(): void
     {
         $response = $this->actingAs($this->ownerA)

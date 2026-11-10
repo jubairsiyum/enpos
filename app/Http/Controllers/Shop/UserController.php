@@ -9,6 +9,7 @@ use App\Support\CurrentBusiness;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -54,13 +55,11 @@ class UserController extends Controller
             ]);
         }
 
-        $roles = Role::where(function ($q) use ($businessId) {
-            $q->where('business_id', $businessId)
-                ->orWhere(function ($sub) {
-                    $sub->whereNull('business_id')
-                        ->whereIn('name', ['owner', 'admin', 'cashier']);
-                });
-        })->get(['id', 'name']);
+        $roles = [
+            ['id' => 'super_admin', 'name' => 'super_admin', 'label' => 'Superadmin'],
+            ['id' => 'admin',       'name' => 'admin',       'label' => 'Admin'],
+            ['id' => 'owner',       'name' => 'owner',       'label' => 'Shop Owners'],
+        ];
 
         $locations = Location::where('business_id', $businessId)
             ->where('is_active', true)
@@ -91,21 +90,34 @@ class UserController extends Controller
     {
         $businessId = $this->currentBusiness->id();
 
-        $roles = Role::where(function ($q) use ($businessId) {
-            $q->where('business_id', $businessId)
-                ->orWhere(function ($sub) {
-                    $sub->whereNull('business_id')
-                        ->whereIn('name', ['owner', 'admin', 'cashier']);
-                });
-        })->get(['id', 'name']);
+        $roles = [
+            ['id' => 'super_admin', 'name' => 'super_admin', 'label' => 'Superadmin'],
+            ['id' => 'admin',       'name' => 'admin',       'label' => 'Admin'],
+            ['id' => 'owner',       'name' => 'owner',       'label' => 'Shop Owners'],
+        ];
 
         $locations = Location::where('business_id', $businessId)
             ->where('is_active', true)
             ->get(['id', 'name', 'location_id']);
 
+        $departments = DB::table('hrm_departments')
+            ->where('business_id', $businessId)
+            ->get(['id', 'name']);
+
+        $designations = DB::table('hrm_designations')
+            ->where('business_id', $businessId)
+            ->get(['id', 'name']);
+
+        $contacts = DB::table('contacts')
+            ->where('business_id', $businessId)
+            ->get(['id', 'name']);
+
         return Inertia::render('Shop/Users/Create', [
-            'roles'     => $roles,
-            'locations' => $locations,
+            'roles'        => $roles,
+            'locations'    => $locations,
+            'departments'  => $departments,
+            'designations' => $designations,
+            'contacts'     => $contacts,
         ]);
     }
 
@@ -119,9 +131,17 @@ class UserController extends Controller
             'last_name'           => ['nullable', 'string', 'max:100'],
             'email'               => ['required', 'email', 'max:255', 'unique:users,email'],
             'username'            => ['nullable', 'string', 'max:100', 'unique:users,username'],
-            'password'            => ['required', 'string', 'min:6', 'confirmed'],
-            'role'                => ['nullable', 'string'],
+            'password'            => [
+                Rule::requiredIf(fn () => filter_var($request->input('allow_login', true), FILTER_VALIDATE_BOOLEAN)),
+                'nullable',
+                'string',
+                'min:6',
+                'confirmed',
+            ],
+            'role'                => ['nullable', 'string', 'in:super_admin,admin,owner'],
             'is_active'           => ['boolean'],
+            'enable_service_staff_pin' => ['nullable', 'boolean'],
+            'staff_pin'           => ['nullable', 'string', 'max:30'],
             'allow_login'         => ['boolean'],
             'access_locations'    => ['nullable', 'array'],
             'commission_rate'     => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -134,8 +154,8 @@ class UserController extends Controller
             'phone'               => ['nullable', 'string', 'max:30'],
             'alt_number'          => ['nullable', 'string', 'max:30'],
             'family_number'       => ['nullable', 'string', 'max:30'],
-            'fb_link'             => ['nullable', 'url', 'max:255'],
-            'twitter_link'        => ['nullable', 'url', 'max:255'],
+            'fb_link'             => ['nullable', 'string', 'max:255'],
+            'twitter_link'        => ['nullable', 'string', 'max:255'],
             'social_media_1'      => ['nullable', 'string', 'max:255'],
             'social_media_2'      => ['nullable', 'string', 'max:255'],
             'custom_field_1'      => ['nullable', 'string', 'max:255'],
@@ -153,20 +173,38 @@ class UserController extends Controller
 
         $name = trim(($validated['prefix'] ?? '') . ' ' . $validated['first_name'] . ' ' . ($validated['last_name'] ?? ''));
 
+        $password = ! empty($validated['password'])
+            ? Hash::make($validated['password'])
+            : Hash::make(\Illuminate\Support\Str::random(32));
+
+        $accessLocations = (! empty($validated['access_locations']) && ! in_array('all', $validated['access_locations']))
+            ? $validated['access_locations']
+            : ['all'];
+
+        $role = $validated['role'] ?? null;
+        $type = match ($role) {
+            'super_admin' => 'super_admin',
+            'admin'       => 'admin',
+            'owner'       => 'owner',
+            default       => 'staff',
+        };
+
         $user = User::create([
             'business_id'        => $businessId,
-            'type'               => 'staff',
+            'type'               => $type,
             'name'               => $name,
             'first_name'         => $validated['first_name'],
             'last_name'          => $validated['last_name'] ?? null,
             'prefix'             => $validated['prefix'] ?? null,
             'email'              => $validated['email'],
             'username'           => $validated['username'] ?? null,
-            'password'           => Hash::make($validated['password']),
+            'password'           => $password,
             'is_active'          => $validated['is_active'] ?? true,
+            'enable_service_staff_pin' => (bool) ($validated['enable_service_staff_pin'] ?? false),
+            'staff_pin'          => $validated['staff_pin'] ?? null,
             'allow_login'        => $validated['allow_login'] ?? true,
             'is_cmmsn_agent'     => false,
-            'access_locations'   => $validated['access_locations'] ?? ['all'],
+            'access_locations'   => $accessLocations,
             'commission_rate'    => $validated['commission_rate'] ?? null,
             'max_sales_discount' => $validated['max_sales_discount'] ?? null,
             'selected_contacts'  => $validated['selected_contacts'] ?? null,
@@ -194,9 +232,9 @@ class UserController extends Controller
             'hrm_details'        => $validated['hrm_details'] ?? null,
         ]);
 
-        if (! empty($validated['role'])) {
+        if (! empty($role)) {
             setPermissionsTeamId($businessId);
-            $user->assignRole($validated['role']);
+            $user->assignRole($role);
         }
 
         if ($request->wantsJson()) {
@@ -206,7 +244,7 @@ class UserController extends Controller
             ], 201);
         }
 
-        return redirect()->route('shop.users.index')->with('success', 'User created successfully.');
+        return redirect()->back()->with('success', "User '{$name}' created and saved to database successfully.");
     }
 
     public function show(Request $request, User $user): Response|JsonResponse
@@ -232,24 +270,37 @@ class UserController extends Controller
 
         $businessId = $this->currentBusiness->id();
 
-        $roles = Role::where(function ($q) use ($businessId) {
-            $q->where('business_id', $businessId)
-                ->orWhere(function ($sub) {
-                    $sub->whereNull('business_id')
-                        ->whereIn('name', ['owner', 'admin', 'cashier']);
-                });
-        })->get(['id', 'name']);
+        $roles = [
+            ['id' => 'super_admin', 'name' => 'super_admin', 'label' => 'Superadmin'],
+            ['id' => 'admin',       'name' => 'admin',       'label' => 'Admin'],
+            ['id' => 'owner',       'name' => 'owner',       'label' => 'Shop Owners'],
+        ];
 
         $locations = Location::where('business_id', $businessId)
             ->where('is_active', true)
             ->get(['id', 'name', 'location_id']);
 
+        $departments = DB::table('hrm_departments')
+            ->where('business_id', $businessId)
+            ->get(['id', 'name']);
+
+        $designations = DB::table('hrm_designations')
+            ->where('business_id', $businessId)
+            ->get(['id', 'name']);
+
+        $contacts = DB::table('contacts')
+            ->where('business_id', $businessId)
+            ->get(['id', 'name']);
+
         return Inertia::render('Shop/Users/Edit', [
-            'user'      => array_merge($user->toArray(), [
+            'user'         => array_merge($user->toArray(), [
                 'role' => $user->roles->pluck('name')->first() ?? '',
             ]),
-            'roles'     => $roles,
-            'locations' => $locations,
+            'roles'        => $roles,
+            'locations'    => $locations,
+            'departments'  => $departments,
+            'designations' => $designations,
+            'contacts'     => $contacts,
         ]);
     }
 
@@ -265,8 +316,10 @@ class UserController extends Controller
             'email'               => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'username'            => ['nullable', 'string', 'max:100', Rule::unique('users', 'username')->ignore($user->id)],
             'password'            => ['nullable', 'string', 'min:6', 'confirmed'],
-            'role'                => ['nullable', 'string'],
+            'role'                => ['nullable', 'string', 'in:super_admin,admin,owner'],
             'is_active'           => ['boolean'],
+            'enable_service_staff_pin' => ['nullable', 'boolean'],
+            'staff_pin'           => ['nullable', 'string', 'max:30'],
             'allow_login'         => ['boolean'],
             'access_locations'    => ['nullable', 'array'],
             'commission_rate'     => ['nullable', 'numeric', 'min:0', 'max:100'],
@@ -306,6 +359,10 @@ class UserController extends Controller
             'email'              => $validated['email'],
             'username'           => $validated['username'] ?? null,
             'is_active'          => $validated['is_active'] ?? $user->is_active,
+            'enable_service_staff_pin' => array_key_exists('enable_service_staff_pin', $validated)
+                ? (bool) $validated['enable_service_staff_pin']
+                : $user->enable_service_staff_pin,
+            'staff_pin'          => $validated['staff_pin'] ?? $user->staff_pin,
             'allow_login'        => $validated['allow_login'] ?? $user->allow_login,
             'access_locations'   => $validated['access_locations'] ?? $user->access_locations,
             'commission_rate'    => $validated['commission_rate'] ?? $user->commission_rate,
@@ -339,11 +396,23 @@ class UserController extends Controller
             $updateData['password'] = Hash::make($validated['password']);
         }
 
+        if (array_key_exists('role', $validated)) {
+            $role = $validated['role'];
+            $type = match ($role) {
+                'super_admin' => 'super_admin',
+                'admin'       => 'admin',
+                'owner'       => 'owner',
+                default       => $user->type,
+            };
+            $updateData['type'] = $type;
+        }
+
         $user->update($updateData);
 
         if (array_key_exists('role', $validated)) {
+            $role = $validated['role'];
             setPermissionsTeamId($businessId);
-            $user->syncRoles($validated['role'] ? [$validated['role']] : []);
+            $user->syncRoles($role ? [$role] : []);
         }
 
         if ($request->wantsJson()) {

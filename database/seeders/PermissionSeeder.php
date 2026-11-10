@@ -63,21 +63,26 @@ class PermissionSeeder extends Seeder
         }
 
         // ----------------------------------------------------------------
-        // Platform roles
+        // Platform & Partitioned Roles
         // ----------------------------------------------------------------
+        // 1. Superadmin: All access across platform and shop
         $superAdminRole = Role::firstOrCreate(['name' => 'super_admin', 'guard_name' => 'web']);
-        $superAdminRole->syncPermissions(Permission::where('name', 'like', 'platform.%')->pluck('name')->toArray());
+        $superAdminRole->syncPermissions(Permission::all());
 
+        // 2. Admin: Platform management and shop admin operations (kisu kom access than Superadmin)
         $adminRole = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        $adminRole->syncPermissions([
-            'platform.businesses.view', 'platform.businesses.edit',
-            'platform.subscriptions.view',
-        ]);
+        $adminRole->syncPermissions(
+            Permission::where(function ($q) {
+                $q->where('name', 'like', 'shop.%')
+                  ->orWhereIn('name', [
+                      'platform.businesses.view', 'platform.businesses.edit',
+                      'platform.subscriptions.view', 'platform.users.view', 'platform.users.create', 'platform.users.edit',
+                      'platform.plans.view',
+                  ]);
+            })->pluck('name')->toArray()
+        );
 
-        // ----------------------------------------------------------------
-        // Shop roles (note: Spatie team_id = business_id when assigned)
-        // ----------------------------------------------------------------
-        // These are templates — actual assignment uses setPermissionTeamId
+        // 3. Shop Owners (owner): Full permissions for shop operations, no platform admin perms
         $ownerRole = Role::firstOrCreate(['name' => 'owner', 'guard_name' => 'web']);
         $ownerRole->syncPermissions(Permission::where('name', 'like', 'shop.%')->pluck('name')->toArray());
 

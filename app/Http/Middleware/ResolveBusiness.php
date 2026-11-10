@@ -69,7 +69,7 @@ class ResolveBusiness
         }
 
         // 4. Development / single-domain fallback: the user's own business
-        if (app()->environment('local') && ($user = $request->user()) && $user->business_id) {
+        if (app()->environment('local', 'testing') && ($user = $request->user()) && $user->business_id) {
             return Business::withoutGlobalScope('business')
                 ->whereKey($user->business_id)
                 ->with('activeSubscription')

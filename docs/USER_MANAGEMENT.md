@@ -16,13 +16,20 @@ It is split into three main sub-sections:
 - Every shop user record is strictly bound to `business_id`.
 - The global tenancy scope prevents cross-tenant data access; attempting to view or modify another shop's user returns HTTP `404 Not Found`.
 - Roles and permissions are managed using **Spatie Laravel Permission** in team mode (`team_foreign_key => business_id`). When assigning or verifying roles, the active tenant context is injected via `setPermissionsTeamId($businessId)`.
-- System roles (`owner`, `admin`, `cashier`) are pre-seeded and protected from deletion.
+- **Partitioned User Roles Architecture**:
+  The user management dropdown strictly exposes 3 defined roles with partitioned privilege tiers:
+  1. **Superadmin (`super_admin`)**: Full unrestricted master access across the entire platform, subscriptions, businesses, and all shop operations. Bypasses permission checks via `Gate::before`.
+  2. **Admin (`admin`)**: Comprehensive platform & shop administration authority. Has complete shop operations access and key platform management privileges, but excludes dangerous destructive platform actions.
+  3. **Shop Owners (`owner`)**: Dedicated shop owner access. Possesses 100% full functional permissions inside their specific shop (`shop.*`), with zero access to platform-level administrative modules.
+- Extra roles (such as duplicate names or granular cashier roles) are excluded from the main user role assignment dropdown to maintain clean, consistent role partitioning.
 
 ---
 
 ## 3. Database Schema Changes
 
-Migration: `2026_11_09_100000_add_user_management_columns_to_users_table.php`
+Migrations:
+1. `2026_11_09_100000_add_user_management_columns_to_users_table.php`
+2. `2026_11_10_110000_add_service_staff_pin_columns_to_users_table.php`
 
 ### Added Columns to `users`:
 | Column | Type | Description |
@@ -31,6 +38,8 @@ Migration: `2026_11_09_100000_add_user_management_columns_to_users_table.php`
 | `prefix` | string, nullable | Name prefix (Mr, Mrs, Miss, etc.) |
 | `first_name` | string, nullable | First name |
 | `last_name` | string, nullable | Last name |
+| `enable_service_staff_pin` | boolean (default false) | Enables fast service staff PIN login |
+| `staff_pin` | string(30), nullable | Service staff authentication PIN |
 | `is_cmmsn_agent` | boolean (default false) | Flag identifying sales commission agents |
 | `access_locations` | json, nullable | Authorized location IDs or `['all']` |
 | `dob` | date, nullable | Date of birth |
@@ -48,7 +57,7 @@ Migration: `2026_11_09_100000_add_user_management_columns_to_users_table.php`
 | `permanent_address` | text, nullable | Permanent residential address |
 | `current_address` | text, nullable | Current residential address |
 | `bank_details` | json, nullable | Bank name, account number, code, branch, tax ID |
-| `hrm_details` | json, nullable | Department, designation, salary, pay cycle |
+| `hrm_details` | json, nullable | Department, designation, primary work location, basic salary, pay cycle, pay components |
 
 ---
 
@@ -92,7 +101,7 @@ Defined in `config/shop_permissions.php` and seeded via `PermissionSeeder`:
   - **Reports**: Profit/loss, stock, taxes, customer/supplier, trending products, register, stock alert
   - **Settings & Expenses**: Business settings, barcodes, invoices, printers, expense CRUD
   - **Home**: View Home dashboard data
-- **Extended & Modular Groups (Image 1 & 2 additions)**:
+- **Extended & Modular Groups**:
   - **Account**: Access Accounts, Edit account transaction, Delete account transaction
   - **Access selling price groups**: Default Selling Price
   - **Accounting**: Module access, Accounts, Journal CRUD, Map Transactions, Transfer CRUD, Budget, Reports
@@ -150,8 +159,17 @@ Defined in `config/shop_permissions.php` and seeded via `PermissionSeeder`:
 Located at `resources/js/Pages/Shop/`:
 - **Users**:
   - `Users/Index.vue`: Matches Image 1 layout with search, pagination, export buttons (CSV, Excel, Print, PDF), column visibility toggles, and action buttons.
-  - `Users/Create.vue`: Matches Image 2 form with all sections (Roles & Permissions, Sales, More Info, Bank Details, HRM/Payroll).
-  - `Users/Edit.vue`: Edit existing user details.
+  - `Users/Create.vue`: Matches Ultimate POS user creation screens (Images 1 & 2):
+    - **Basic Information**: Prefix, First Name*, Last Name, Email*, Is active ? ℹ, Enable service staff pin ℹ, Staff Pin (conditionally displayed only when `Enable service staff pin` is active; empty by default with "Staff Pin" placeholder and `autocomplete="off"`).
+    - **Roles and Permissions**: Allow login checkbox, Username (with auto-generation note), Password*, Confirm Password*, Role* ℹ (Field is blank by default displaying "Select Role" as a disabled/hidden placeholder; user must explicitly select one of the 3 partitioned options: **Superadmin**, **Admin**, or **Shop Owners**), Access locations ℹ (All Locations ℹ toggle + granular location checkboxes).
+    - **Sales**: Sales Commission Percentage (%) ℹ, Max sales discount percent ℹ, Allow Selected Contacts ℹ, Select Contacts (conditionally displayed only when `Allow Selected Contacts` is checked).
+    - **More Information**: Always-open standard card (DOB, Gender, Marital Status, Blood Group, Mobile, Alternate contact, Family contact, Social links, Custom fields 1-4, Guardian name, ID proof, Addresses).
+    - **Bank Details**: Always-open standard card (Account Holder Name, Account Number, Bank Name, Bank Identifier Code, Branch, Tax Payer ID).
+    - **HRM Details**: Dedicated card with Department (select dropdown with "Please Select") and Designation (select dropdown with "Please Select").
+    - **Payroll**: Dedicated card with Primary work location (select dropdown), Basic salary (composite input with numerical amount + duration dropdown e.g. "Per Month", "Per Week", "Per Day"), and Pay Components.
+    - **Action**: Centered primary Save button (`#4f2bed`). When clicked, the user record is stored into the database `users` table via `User::create()`, and upon success, all form fields are automatically reset to blank (`form.reset()`) with a green confirmation banner shown to the user.
+    - **Validation & Feedback**: Global validation error summary banner and per-field error messages are displayed if any required fields fail validation.
+  - `Users/Edit.vue`: Edit existing user details with identical multi-section structure and prepopulated inputs.
   - `Users/Show.vue`: Detailed view card.
 - **Roles**:
   - `Roles/Index.vue`: Matches Image 3 layout with roles table and action controls.

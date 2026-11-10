@@ -32,6 +32,8 @@ class User extends Authenticatable
         'type',          // super_admin | admin | owner | staff
         'business_id',   // NULL for platform users
         'is_active',
+        'enable_service_staff_pin',
+        'staff_pin',
         'phone',
         'avatar',
         'language',
@@ -77,6 +79,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password'          => 'hashed',
         'is_active'         => 'boolean',
+        'enable_service_staff_pin' => 'boolean',
         'dark_mode'         => 'boolean',
         'allow_login'       => 'boolean',
         'is_cmmsn_agent'    => 'boolean',
@@ -125,17 +128,22 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return $this->type === 'super_admin';
+        return $this->type === 'super_admin' || $this->hasRole('super_admin');
     }
 
     public function isPlatformAdmin(): bool
     {
-        return in_array($this->type, ['super_admin', 'admin']);
+        return in_array($this->type, ['super_admin', 'admin']) || $this->hasRole('super_admin') || $this->hasRole('admin');
+    }
+
+    public function isShopOwner(): bool
+    {
+        return $this->type === 'owner' || $this->hasRole('owner');
     }
 
     public function isShopUser(): bool
     {
-        return in_array($this->type, ['owner', 'staff']);
+        return in_array($this->type, ['owner', 'staff']) || $this->hasRole('owner');
     }
 
     public function isPlatformUser(): bool

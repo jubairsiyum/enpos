@@ -53,6 +53,14 @@ const deleteUser = (user) => {
             <span class="text-sm text-gray-500">Manage users</span>
         </div>
 
+        <!-- Flash Alert -->
+        <div v-if="$page.props.flash?.success" class="bg-green-50 border border-green-200 text-green-800 text-xs rounded-lg p-4 flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-2">
+                <span class="text-green-600 font-bold text-sm">✓</span>
+                <span class="font-medium">{{ $page.props.flash.success }}</span>
+            </div>
+        </div>
+
         <!-- Main Card -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <div class="flex items-center justify-between pb-4 border-b border-gray-100 mb-4">
