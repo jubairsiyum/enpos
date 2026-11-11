@@ -281,4 +281,29 @@ XML;
             ->get('/app/contacts/import')
             ->assertOk();
     }
+
+    public function test_reimporting_same_mobile_is_blocked(): void
+    {
+        $headers = implode(',', array_map(fn (array $col): string => '"' . $col['name'] . '"', ImportContact::TEMPLATE_COLUMNS));
+        $row = [
+            '1', '', 'Ron', '', 'Weasley', '', '', '', '0', '', '', '', 'ron@example.test', '(378) 400-9999',
+            '', '', '', '', '', '', '', '', '', '', '', '',
+        ];
+        $csv = $headers . "\n" . implode(',', array_map(fn (string $v): string => '"' . $v . '"', $row)) . "\n";
+
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/import-contacts', [
+                'file' => UploadedFile::fake()->createWithContent('contacts.csv', $csv),
+            ])
+            ->assertCreated();
+
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/import-contacts', [
+                'file' => UploadedFile::fake()->createWithContent('contacts_dup.csv', $csv),
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['file']);
+    }
 }

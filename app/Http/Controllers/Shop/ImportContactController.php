@@ -107,14 +107,20 @@ class ImportContactController extends Controller
         $imported = DB::transaction(function () use ($rows, $businessId, $userId): array {
             $created = [];
             $seenContactIds = [];
+            $seenMobiles = [];
+            $seenEmails = [];
 
             foreach ($rows as $index => $row) {
                 $rowNumber = $index + 2; // 1-based accounting for header row
                 $mapped = $this->mapRowToFields($row);
-                $validated = $this->validateRow($mapped, $rowNumber, $businessId, $seenContactIds);
+                $validated = $this->validateRow($mapped, $rowNumber, $businessId, $seenContactIds, $seenMobiles, $seenEmails);
 
                 $contactId = $validated['contact_id'] ?: Contact::generateContactId($businessId, 'CO');
                 $seenContactIds[] = $contactId;
+                $seenMobiles[] = $validated['mobile'];
+                if (! empty($validated['email'])) {
+                    $seenEmails[] = mb_strtolower((string) $validated['email']);
+                }
 
                 $type = ImportContact::resolveTypeName((int) $validated['contact_type']);
                 $fullName = trim(implode(' ', array_filter([
@@ -354,6 +360,9 @@ class ImportContactController extends Controller
         if ($mapped['pay_term_period'] !== null) {
             $mapped['pay_term_period'] = strtolower((string) $mapped['pay_term_period']);
         }
+        if ($mapped['email'] !== null) {
+            $mapped['email'] = mb_strtolower((string) $mapped['email']);
+        }
 
         // Microsoft Excel stores unquoted dates as serial numbers (days since 1899-12-30)
         if ($mapped['dob'] !== null && preg_match('/^\d+(\.\d+)?$/', (string) $mapped['dob'])) {
@@ -369,10 +378,18 @@ class ImportContactController extends Controller
     /**
      * @param  array<string, mixed>  $mapped
      * @param  array<int, string>    $seenContactIds
+     * @param  array<int, string>    $seenMobiles
+     * @param  array<int, string>    $seenEmails
      * @return array<string, mixed>
      */
-    private function validateRow(array $mapped, int $rowNumber, int $businessId, array $seenContactIds): array
-    {
+    private function validateRow(
+        array $mapped,
+        int $rowNumber,
+        int $businessId,
+        array $seenContactIds,
+        array $seenMobiles,
+        array $seenEmails,
+    ): array {
         $isSupplierOrBoth = in_array((int) ($mapped['contact_type'] ?? 0), [2, 3], true);
 
         $validator = Validator::make($mapped, [
@@ -386,7 +403,7 @@ class ImportContactController extends Controller
                 'nullable',
                 'string',
                 'max:50',
-                Rule::unique('contacts', 'contact_id')->where('business_id', $businessId),
+                Rule::unique('contacts', 'contact_id')->where('business_id', $businessId)->whereNull('deleted_at'),
                 Rule::notIn($seenContactIds),
             ],
             'tax_number'       => ['nullable', 'string', 'max:100'],
@@ -394,8 +411,20 @@ class ImportContactController extends Controller
             'pay_term'         => [Rule::requiredIf($isSupplierOrBoth), 'nullable', 'integer', 'min:1', 'max:65535'],
             'pay_term_period'  => [Rule::requiredIf($isSupplierOrBoth), 'nullable', Rule::in(['days', 'months'])],
             'credit_limit'     => ['nullable', 'numeric', 'min:0'],
-            'email'            => ['nullable', 'email', 'max:255'],
-            'mobile'           => ['required', 'string', 'max:20'],
+            'email'            => [
+                'nullable',
+                'email',
+                'max:255',
+                Rule::unique('contacts', 'email')->where('business_id', $businessId)->whereNull('deleted_at'),
+                Rule::notIn($seenEmails),
+            ],
+            'mobile'           => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('contacts', 'mobile')->where('business_id', $businessId)->whereNull('deleted_at'),
+                Rule::notIn($seenMobiles),
+            ],
             'alternate_number' => ['nullable', 'string', 'max:20'],
             'landline'         => ['nullable', 'string', 'max:20'],
             'city'             => ['nullable', 'string', 'max:100'],

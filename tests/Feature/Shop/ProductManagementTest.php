@@ -546,4 +546,114 @@ class ProductManagementTest extends TestCase
 
         $this->assertDatabaseHas('products', ['id' => $soldProductId]);
     }
+
+    public function test_same_type_product_resubmission_increments_stock_and_blocks_redundancy(): void
+    {
+        // 1. Initial single product creation with quantity = 5
+        $firstRes = $this->actingAs($this->ownerA, 'sanctum')
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/products/add', [
+                'name'                   => 'MacBook Air M3',
+                'sku'                    => 'MBA-M3-01',
+                'unit_id'                => $this->unitA->id,
+                'location_ids'           => [$this->locationA1->id],
+                'type'                   => 'single',
+                'default_purchase_price' => 1000,
+                'profit_percent'         => 25,
+                'quantity'               => 5,
+            ])
+            ->assertCreated();
+
+        $productId = (int) $firstRes->json('data.id');
+        $this->assertSame(5.0, (float) $firstRes->json('data.current_stock'));
+
+        // 2. Resubmitting the same single product (with same type) does NOT create a new row; it increases stock
+        $secondRes = $this->actingAs($this->ownerA, 'sanctum')
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/products/add', [
+                'name'                   => '  macbook air m3 ',
+                'unit_id'                => $this->unitA->id,
+                'location_ids'           => [$this->locationA1->id],
+                'type'                   => 'single',
+                'default_purchase_price' => 1000,
+                'quantity'               => 3,
+            ])
+            ->assertOk()
+            ->assertJsonPath('stock_incremented', true)
+            ->assertJsonPath('data.id', $productId);
+
+        $this->assertSame(8.0, (float) $secondRes->json('data.current_stock'));
+        $this->assertSame(1, Product::where('business_id', $this->businessA->id)->count());
+
+        // 3. Resubmitting without explicit quantity increments by 1 by default
+        $thirdRes = $this->actingAs($this->ownerA, 'sanctum')
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/products/add', [
+                'name'    => 'MacBook Air M3',
+                'unit_id' => $this->unitA->id,
+                'type'    => 'single',
+            ])
+            ->assertOk();
+
+        $this->assertSame(9.0, (float) $thirdRes->json('data.current_stock'));
+        $this->assertSame(1, Product::where('business_id', $this->businessA->id)->count());
+
+        // 4. Resubmitting the same name with a DIFFERENT type is rejected cleanly with 422
+        $this->actingAs($this->ownerA, 'sanctum')
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/products', [
+                'name'       => 'MacBook Air M3',
+                'unit_id'    => $this->unitA->id,
+                'type'       => 'variable',
+                'variations' => [
+                    ['name' => '8GB', 'default_purchase_price' => 1000],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['type']);
+
+        // 5. Using the same SKU with a DIFFERENT product name is rejected cleanly with 422
+        $this->actingAs($this->ownerA, 'sanctum')
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/products', [
+                'name'    => 'Different Laptop',
+                'sku'     => 'MBA-M3-01',
+                'unit_id' => $this->unitA->id,
+                'type'    => 'single',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['sku']);
+
+        // 6. Quick unit & quick brand block duplicates; sub_unit != unit validation works
+        $this->actingAs($this->ownerA, 'sanctum')
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/products/quick-units', [
+                'actual_name' => $this->unitA->actual_name,
+                'short_name'  => $this->unitA->short_name,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['actual_name']);
+
+        $this->actingAs($this->ownerA, 'sanctum')
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/products/quick-brands', [
+                'name' => strtolower($this->brandA->name),
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['name']);
+
+        $this->actingAs($this->ownerA, 'sanctum')
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/products', [
+                'name'        => 'Invalid Sub Unit Product',
+                'unit_id'     => $this->unitA->id,
+                'sub_unit_id' => $this->unitA->id,
+                'variations'  => [
+                    ['name' => 'Red', 'default_purchase_price' => 10],
+                    ['name' => 'red', 'default_purchase_price' => 12],
+                ],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['sub_unit_id', 'variations.1.name']);
+    }
 }

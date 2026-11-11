@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -172,6 +173,10 @@ class CustomerGroupController extends Controller
         bool $isUpdate,
         ?CustomerGroup $existing = null
     ): array {
+        if ($request->has('name') && is_string($request->input('name'))) {
+            $request->merge(['name' => trim($request->input('name'))]);
+        }
+
         $validated = $request->validate([
             'name'                   => [$isUpdate ? 'sometimes' : 'required', 'required', 'string', 'max:255'],
             'price_calculation_type' => ['nullable', Rule::in(['percentage', 'selling_price_group'])],
@@ -184,6 +189,21 @@ class CustomerGroupController extends Controller
             'is_default'             => ['nullable', 'boolean'],
         ]);
 
+        if (isset($validated['name'])) {
+            $duplicateQuery = CustomerGroup::where('business_id', $businessId)
+                ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($validated['name'])]);
+
+            if ($existing !== null) {
+                $duplicateQuery->whereKeyNot($existing->id);
+            }
+
+            if ($duplicateQuery->exists()) {
+                throw ValidationException::withMessages([
+                    'name' => ['A customer group with this name already exists.'],
+                ]);
+            }
+        }
+
         $calculationType = $validated['price_calculation_type']
             ?? $existing?->price_calculation_type
             ?? 'percentage';
@@ -194,6 +214,11 @@ class CustomerGroupController extends Controller
             $validated['amount'] = null;
             if (! array_key_exists('selling_price_group_id', $validated)) {
                 $validated['selling_price_group_id'] = $existing?->selling_price_group_id;
+            }
+            if (empty($validated['selling_price_group_id'])) {
+                throw ValidationException::withMessages([
+                    'selling_price_group_id' => ['Please select a selling price group when using selling price group calculation.'],
+                ]);
             }
         } else {
             $validated['selling_price_group_id'] = null;

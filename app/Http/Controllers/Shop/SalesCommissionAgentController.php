@@ -10,6 +10,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -69,17 +70,7 @@ class SalesCommissionAgentController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $businessId = $this->currentBusiness->id();
-
-        $validated = $request->validate([
-            'prefix'            => ['nullable', 'string', 'max:20'],
-            'first_name'        => ['required', 'string', 'max:100'],
-            'last_name'         => ['nullable', 'string', 'max:100'],
-            'email'             => ['nullable', 'email', 'max:255', 'unique:users,email'],
-            'phone'             => ['nullable', 'string', 'max:30'],
-            'permanent_address' => ['nullable', 'string'],
-            'commission_rate'   => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'is_active'         => ['boolean'],
-        ]);
+        $validated = $this->validateAgentPayload($request, $businessId);
 
         $name = trim(($validated['prefix'] ?? '') . ' ' . $validated['first_name'] . ' ' . ($validated['last_name'] ?? ''));
         $email = ! empty($validated['email']) ? $validated['email'] : ('agent_' . time() . '_' . rand(100, 999) . '@agent.local');
@@ -114,17 +105,7 @@ class SalesCommissionAgentController extends Controller
     public function update(Request $request, User $salesCommissionAgent): RedirectResponse|JsonResponse
     {
         $this->authorizeBusinessAgent($salesCommissionAgent);
-
-        $validated = $request->validate([
-            'prefix'            => ['nullable', 'string', 'max:20'],
-            'first_name'        => ['required', 'string', 'max:100'],
-            'last_name'         => ['nullable', 'string', 'max:100'],
-            'email'             => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->ignore($salesCommissionAgent->id)],
-            'phone'             => ['nullable', 'string', 'max:30'],
-            'permanent_address' => ['nullable', 'string'],
-            'commission_rate'   => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'is_active'         => ['boolean'],
-        ]);
+        $validated = $this->validateAgentPayload($request, (int) $this->currentBusiness->id(), $salesCommissionAgent);
 
         $name = trim(($validated['prefix'] ?? '') . ' ' . $validated['first_name'] . ' ' . ($validated['last_name'] ?? ''));
         $email = ! empty($validated['email']) ? $validated['email'] : $salesCommissionAgent->email;
@@ -162,6 +143,70 @@ class SalesCommissionAgentController extends Controller
         }
 
         return redirect()->route('shop.sales-commission-agents.index')->with('success', 'Sales commission agent deleted.');
+    }
+
+    /**
+     * Validate and deduplicate sales commission agent payloads per business.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws ValidationException
+     */
+    private function validateAgentPayload(Request $request, int $businessId, ?User $existingAgent = null): array
+    {
+        $normalized = [];
+
+        if ($request->has('email') && is_string($request->input('email'))) {
+            $trimmedEmail = mb_strtolower(trim($request->input('email')));
+            $normalized['email'] = $trimmedEmail === '' ? null : $trimmedEmail;
+        }
+        foreach (['prefix', 'first_name', 'last_name', 'phone'] as $field) {
+            if ($request->has($field) && is_string($request->input($field))) {
+                $trimmed = trim($request->input($field));
+                $normalized[$field] = $trimmed === '' ? null : $trimmed;
+            }
+        }
+        if ($normalized !== []) {
+            $request->merge($normalized);
+        }
+
+        $emailRule = Rule::unique('users', 'email');
+        $phoneRule = Rule::unique('users', 'phone')
+            ->where('business_id', $businessId)
+            ->whereNull('deleted_at');
+
+        if ($existingAgent !== null) {
+            $emailRule->ignore($existingAgent->id);
+            $phoneRule->ignore($existingAgent->id);
+        }
+
+        $validated = $request->validate([
+            'prefix'            => ['nullable', 'string', 'max:20'],
+            'first_name'        => ['required', 'string', 'max:100'],
+            'last_name'         => ['nullable', 'string', 'max:100'],
+            'email'             => ['nullable', 'email', 'max:255', $emailRule],
+            'phone'             => ['nullable', 'string', 'max:30', $phoneRule],
+            'permanent_address' => ['nullable', 'string'],
+            'commission_rate'   => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'is_active'         => ['boolean'],
+        ]);
+
+        $fullName = trim(($validated['prefix'] ?? '') . ' ' . $validated['first_name'] . ' ' . ($validated['last_name'] ?? ''));
+        $duplicateNameQuery = User::where('business_id', $businessId)
+            ->where('is_cmmsn_agent', true)
+            ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($fullName)]);
+
+        if ($existingAgent !== null) {
+            $duplicateNameQuery->whereKeyNot($existingAgent->id);
+        }
+
+        if ($duplicateNameQuery->exists()) {
+            throw ValidationException::withMessages([
+                'first_name' => ['A sales commission agent with this name already exists.'],
+            ]);
+        }
+
+        return $validated;
     }
 
     private function authorizeBusinessAgent(User $user): void

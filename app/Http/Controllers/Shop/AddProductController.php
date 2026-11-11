@@ -20,6 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -79,7 +80,7 @@ class AddProductController extends Controller
             $variationImages[0] = $file instanceof UploadedFile ? $file : null;
         }
 
-        $product = $this->productService->createProduct(
+        $result = $this->productService->createOrMergeProduct(
             businessId: $businessId,
             userId: $userId,
             validated: $validated,
@@ -88,27 +89,34 @@ class AddProductController extends Controller
             variationImages: $variationImages,
         );
 
+        $product = $result['product'];
+        $created = $result['created'];
+        $message = $created
+            ? 'Product created successfully.'
+            : 'Product already exists with the same type; stock quantity increased.';
+
         if ($request->wantsJson()) {
             return response()->json([
-                'message' => 'Product created successfully.',
-                'data'    => $this->productService->transformProduct($product),
-            ], 201);
+                'message'           => $message,
+                'stock_incremented' => ! $created,
+                'data'              => $this->productService->transformProduct($product),
+            ], $created ? 201 : 200);
         }
 
         $saveAction = (string) ($validated['save_action'] ?? 'save');
 
         if ($saveAction === 'save_and_add_another') {
             return redirect()->route('shop.products.create')
-                ->with('success', 'Product created successfully. You can add another product.');
+                ->with('success', $message . ' You can add another product.');
         }
 
         if ($saveAction === 'save_and_opening_stock') {
             return redirect()->route('shop.products.index', ['opening_stock_product_id' => $product->id])
-                ->with('success', 'Product created successfully. Set opening stock below.');
+                ->with('success', $message . ' Set opening stock below.');
         }
 
         return redirect()->route('shop.products.index')
-            ->with('success', 'Product created successfully.');
+            ->with('success', $message);
     }
 
     /**
@@ -122,10 +130,27 @@ class AddProductController extends Controller
             'allow_decimal' => ['nullable', 'boolean'],
         ]);
 
+        $businessId = $this->currentBusiness->id();
+        $actualName = trim($validated['actual_name']);
+        $shortName = trim($validated['short_name']);
+
+        $exists = Unit::where('business_id', $businessId)
+            ->where(function ($q) use ($actualName, $shortName): void {
+                $q->whereRaw('LOWER(TRIM(actual_name)) = ?', [mb_strtolower($actualName)])
+                    ->orWhereRaw('LOWER(TRIM(short_name)) = ?', [mb_strtolower($shortName)]);
+            })
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'actual_name' => ['A unit with this name or short name already exists.'],
+            ]);
+        }
+
         $unit = Unit::create([
-            'business_id'   => $this->currentBusiness->id(),
-            'actual_name'   => $validated['actual_name'],
-            'short_name'    => $validated['short_name'],
+            'business_id'   => $businessId,
+            'actual_name'   => $actualName,
+            'short_name'    => $shortName,
             'allow_decimal' => (bool) ($validated['allow_decimal'] ?? false),
         ]);
 
@@ -149,9 +174,22 @@ class AddProductController extends Controller
             'description' => ['nullable', 'string', 'max:255'],
         ]);
 
+        $businessId = $this->currentBusiness->id();
+        $name = trim($validated['name']);
+
+        $exists = Brand::where('business_id', $businessId)
+            ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'name' => ['A brand with this name already exists.'],
+            ]);
+        }
+
         $brand = Brand::create([
-            'business_id' => $this->currentBusiness->id(),
-            'name'        => $validated['name'],
+            'business_id' => $businessId,
+            'name'        => $name,
             'description' => $validated['description'] ?? null,
         ]);
 

@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Role;
@@ -124,52 +125,7 @@ class UserController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $businessId = $this->currentBusiness->id();
-
-        $validated = $request->validate([
-            'prefix'              => ['nullable', 'string', 'max:20'],
-            'first_name'          => ['required', 'string', 'max:100'],
-            'last_name'           => ['nullable', 'string', 'max:100'],
-            'email'               => ['required', 'email', 'max:255', 'unique:users,email'],
-            'username'            => ['nullable', 'string', 'max:100', 'unique:users,username'],
-            'password'            => [
-                Rule::requiredIf(fn () => filter_var($request->input('allow_login', true), FILTER_VALIDATE_BOOLEAN)),
-                'nullable',
-                'string',
-                'min:6',
-                'confirmed',
-            ],
-            'role'                => ['nullable', 'string', 'in:super_admin,admin,owner'],
-            'is_active'           => ['boolean'],
-            'enable_service_staff_pin' => ['nullable', 'boolean'],
-            'staff_pin'           => ['nullable', 'string', 'max:30'],
-            'allow_login'         => ['boolean'],
-            'access_locations'    => ['nullable', 'array'],
-            'commission_rate'     => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'max_sales_discount'  => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'selected_contacts'   => ['nullable', 'array'],
-            'dob'                 => ['nullable', 'date'],
-            'gender'              => ['nullable', 'string', 'max:20'],
-            'marital_status'      => ['nullable', 'string', 'max:30'],
-            'blood_group'         => ['nullable', 'string', 'max:10'],
-            'phone'               => ['nullable', 'string', 'max:30'],
-            'alt_number'          => ['nullable', 'string', 'max:30'],
-            'family_number'       => ['nullable', 'string', 'max:30'],
-            'fb_link'             => ['nullable', 'string', 'max:255'],
-            'twitter_link'        => ['nullable', 'string', 'max:255'],
-            'social_media_1'      => ['nullable', 'string', 'max:255'],
-            'social_media_2'      => ['nullable', 'string', 'max:255'],
-            'custom_field_1'      => ['nullable', 'string', 'max:255'],
-            'custom_field_2'      => ['nullable', 'string', 'max:255'],
-            'custom_field_3'      => ['nullable', 'string', 'max:255'],
-            'custom_field_4'      => ['nullable', 'string', 'max:255'],
-            'guardian_name'       => ['nullable', 'string', 'max:255'],
-            'id_proof_name'       => ['nullable', 'string', 'max:255'],
-            'id_proof_number'     => ['nullable', 'string', 'max:255'],
-            'permanent_address'   => ['nullable', 'string'],
-            'current_address'     => ['nullable', 'string'],
-            'bank_details'        => ['nullable', 'array'],
-            'hrm_details'         => ['nullable', 'array'],
-        ]);
+        $validated = $this->validateUserPayload($request, $businessId);
 
         $name = trim(($validated['prefix'] ?? '') . ' ' . $validated['first_name'] . ' ' . ($validated['last_name'] ?? ''));
 
@@ -308,46 +264,7 @@ class UserController extends Controller
     {
         $this->authorizeBusinessUser($user);
         $businessId = $this->currentBusiness->id();
-
-        $validated = $request->validate([
-            'prefix'              => ['nullable', 'string', 'max:20'],
-            'first_name'          => ['required', 'string', 'max:100'],
-            'last_name'           => ['nullable', 'string', 'max:100'],
-            'email'               => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'username'            => ['nullable', 'string', 'max:100', Rule::unique('users', 'username')->ignore($user->id)],
-            'password'            => ['nullable', 'string', 'min:6', 'confirmed'],
-            'role'                => ['nullable', 'string', 'in:super_admin,admin,owner'],
-            'is_active'           => ['boolean'],
-            'enable_service_staff_pin' => ['nullable', 'boolean'],
-            'staff_pin'           => ['nullable', 'string', 'max:30'],
-            'allow_login'         => ['boolean'],
-            'access_locations'    => ['nullable', 'array'],
-            'commission_rate'     => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'max_sales_discount'  => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'selected_contacts'   => ['nullable', 'array'],
-            'dob'                 => ['nullable', 'date'],
-            'gender'              => ['nullable', 'string', 'max:20'],
-            'marital_status'      => ['nullable', 'string', 'max:30'],
-            'blood_group'         => ['nullable', 'string', 'max:10'],
-            'phone'               => ['nullable', 'string', 'max:30'],
-            'alt_number'          => ['nullable', 'string', 'max:30'],
-            'family_number'       => ['nullable', 'string', 'max:30'],
-            'fb_link'             => ['nullable', 'url', 'max:255'],
-            'twitter_link'        => ['nullable', 'url', 'max:255'],
-            'social_media_1'      => ['nullable', 'string', 'max:255'],
-            'social_media_2'      => ['nullable', 'string', 'max:255'],
-            'custom_field_1'      => ['nullable', 'string', 'max:255'],
-            'custom_field_2'      => ['nullable', 'string', 'max:255'],
-            'custom_field_3'      => ['nullable', 'string', 'max:255'],
-            'custom_field_4'      => ['nullable', 'string', 'max:255'],
-            'guardian_name'       => ['nullable', 'string', 'max:255'],
-            'id_proof_name'       => ['nullable', 'string', 'max:255'],
-            'id_proof_number'     => ['nullable', 'string', 'max:255'],
-            'permanent_address'   => ['nullable', 'string'],
-            'current_address'     => ['nullable', 'string'],
-            'bank_details'        => ['nullable', 'array'],
-            'hrm_details'         => ['nullable', 'array'],
-        ]);
+        $validated = $this->validateUserPayload($request, $businessId, $user);
 
         $name = trim(($validated['prefix'] ?? '') . ' ' . $validated['first_name'] . ' ' . ($validated['last_name'] ?? ''));
 
@@ -446,6 +363,144 @@ class UserController extends Controller
         }
 
         return redirect()->route('shop.users.index')->with('success', 'User deleted successfully.');
+    }
+
+    /**
+     * Validate and normalize user creation/update payloads with anti-redundancy checks.
+     *
+     * @return array<string, mixed>
+     */
+    private function validateUserPayload(Request $request, int $businessId, ?User $existingUser = null): array
+    {
+        $normalized = [];
+
+        if ($request->has('email') && is_string($request->input('email'))) {
+            $normalized['email'] = mb_strtolower(trim($request->input('email')));
+        }
+        if ($request->has('username') && is_string($request->input('username'))) {
+            $trimmedUsername = mb_strtolower(trim($request->input('username')));
+            $normalized['username'] = $trimmedUsername === '' ? null : $trimmedUsername;
+        }
+        foreach (['prefix', 'first_name', 'last_name', 'phone', 'alt_number', 'family_number', 'staff_pin'] as $field) {
+            if ($request->has($field) && is_string($request->input($field))) {
+                $trimmed = trim($request->input($field));
+                $normalized[$field] = $trimmed === '' ? null : $trimmed;
+            }
+        }
+        if ($request->has('access_locations') && is_array($request->input('access_locations'))) {
+            $normalized['access_locations'] = array_values(array_unique(
+                array_filter($request->input('access_locations'), fn (mixed $v): bool => $v !== null && $v !== '')
+            ));
+        }
+        if ($request->has('selected_contacts') && is_array($request->input('selected_contacts'))) {
+            $normalized['selected_contacts'] = array_values(array_unique(
+                array_filter($request->input('selected_contacts'), fn (mixed $v): bool => $v !== null && $v !== '')
+            ));
+        }
+
+        if ($normalized !== []) {
+            $request->merge($normalized);
+        }
+
+        $emailRule = Rule::unique('users', 'email');
+        $usernameRule = Rule::unique('users', 'username');
+        $phoneRule = Rule::unique('users', 'phone')
+            ->where('business_id', $businessId)
+            ->whereNull('deleted_at');
+        $pinRule = Rule::unique('users', 'staff_pin')
+            ->where('business_id', $businessId)
+            ->whereNull('deleted_at');
+
+        if ($existingUser !== null) {
+            $emailRule->ignore($existingUser->id);
+            $usernameRule->ignore($existingUser->id);
+            $phoneRule->ignore($existingUser->id);
+            $pinRule->ignore($existingUser->id);
+        }
+
+        $passwordRules = $existingUser === null
+            ? [
+                Rule::requiredIf(fn () => filter_var($request->input('allow_login', true), FILTER_VALIDATE_BOOLEAN)),
+                'nullable',
+                'string',
+                'min:6',
+                'confirmed',
+            ]
+            : ['nullable', 'string', 'min:6', 'confirmed'];
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'prefix'                   => ['nullable', 'string', 'max:20'],
+            'first_name'               => ['required', 'string', 'max:100'],
+            'last_name'                => ['nullable', 'string', 'max:100'],
+            'email'                    => ['required', 'email', 'max:255', $emailRule],
+            'username'                 => ['nullable', 'string', 'max:100', $usernameRule],
+            'password'                 => $passwordRules,
+            'role'                     => [
+                'nullable',
+                'string',
+                function (string $attribute, mixed $value, \Closure $fail) use ($businessId): void {
+                    if ($value === null || $value === '') {
+                        return;
+                    }
+                    if (in_array($value, ['super_admin', 'admin', 'owner', 'cashier'], true)) {
+                        return;
+                    }
+                    $customExists = Role::where('business_id', $businessId)->where('name', (string) $value)->exists();
+                    if (! $customExists) {
+                        $fail('The selected role is invalid for this business.');
+                    }
+                },
+            ],
+            'is_active'                => ['boolean'],
+            'enable_service_staff_pin' => ['nullable', 'boolean'],
+            'staff_pin'                => ['nullable', 'string', 'max:30', $pinRule],
+            'allow_login'              => ['boolean'],
+            'access_locations'         => ['nullable', 'array'],
+            'access_locations.*'       => [
+                function (string $attribute, mixed $value, \Closure $fail) use ($businessId): void {
+                    if ($value === 'all') {
+                        return;
+                    }
+                    if (! is_numeric($value) || ! Location::where('business_id', $businessId)->whereKey((int) $value)->exists()) {
+                        $fail('The selected location is invalid for this business.');
+                    }
+                },
+            ],
+            'commission_rate'          => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'max_sales_discount'       => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'selected_contacts'        => ['nullable', 'array'],
+            'selected_contacts.*'      => ['integer', Rule::exists('contacts', 'id')->where('business_id', $businessId)],
+            'dob'                      => ['nullable', 'date'],
+            'gender'                   => ['nullable', 'string', 'max:20'],
+            'marital_status'           => ['nullable', 'string', 'max:30'],
+            'blood_group'              => ['nullable', 'string', 'max:10'],
+            'phone'                    => ['nullable', 'string', 'max:30', $phoneRule],
+            'alt_number'               => ['nullable', 'string', 'max:30'],
+            'family_number'            => ['nullable', 'string', 'max:30'],
+            'fb_link'                  => ['nullable', 'url', 'max:255'],
+            'twitter_link'             => ['nullable', 'url', 'max:255'],
+            'social_media_1'           => ['nullable', 'string', 'max:255'],
+            'social_media_2'           => ['nullable', 'string', 'max:255'],
+            'custom_field_1'           => ['nullable', 'string', 'max:255'],
+            'custom_field_2'           => ['nullable', 'string', 'max:255'],
+            'custom_field_3'           => ['nullable', 'string', 'max:255'],
+            'custom_field_4'           => ['nullable', 'string', 'max:255'],
+            'guardian_name'            => ['nullable', 'string', 'max:255'],
+            'id_proof_name'            => ['nullable', 'string', 'max:255'],
+            'id_proof_number'          => ['nullable', 'string', 'max:255'],
+            'permanent_address'        => ['nullable', 'string'],
+            'current_address'          => ['nullable', 'string'],
+            'bank_details'             => ['nullable', 'array'],
+            'hrm_details'              => ['nullable', 'array'],
+        ]);
+
+        $validator->after(function (Validator $validator) use ($request): void {
+            if ($request->boolean('enable_service_staff_pin') && ! $request->filled('staff_pin')) {
+                $validator->errors()->add('staff_pin', 'Staff PIN is required when service staff PIN is enabled.');
+            }
+        });
+
+        return $validator->validate();
     }
 
     private function authorizeBusinessUser(User $user): void

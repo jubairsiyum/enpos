@@ -7,6 +7,7 @@ use App\Support\CurrentBusiness;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\Permission\Models\Permission;
@@ -80,20 +81,7 @@ class RoleController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $businessId = $this->currentBusiness->id();
-
-        $validated = $request->validate([
-            'name'          => ['required', 'string', 'max:100'],
-            'permissions'   => ['nullable', 'array'],
-            'permissions.*' => ['string', 'exists:permissions,name'],
-        ]);
-
-        $exists = Role::where('name', $validated['name'])
-            ->where('business_id', $businessId)
-            ->exists();
-
-        if ($exists) {
-            abort(422, 'Role with this name already exists for your business.');
-        }
+        $validated = $this->validateRolePayload($request, $businessId);
 
         setPermissionsTeamId($businessId);
 
@@ -153,11 +141,7 @@ class RoleController extends Controller
         $this->authorizeBusinessRole($role);
         $businessId = $this->currentBusiness->id();
 
-        $validated = $request->validate([
-            'name'          => ['required', 'string', 'max:100'],
-            'permissions'   => ['nullable', 'array'],
-            'permissions.*' => ['string', 'exists:permissions,name'],
-        ]);
+        $validated = $this->validateRolePayload($request, $businessId, $role);
 
         if (! is_null($role->business_id)) {
             $role->update(['name' => $validated['name']]);
@@ -193,6 +177,56 @@ class RoleController extends Controller
         }
 
         return redirect()->route('shop.roles.index')->with('success', 'Role deleted successfully.');
+    }
+
+    /**
+     * Validate role name uniqueness and permission list per business.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws ValidationException
+     */
+    private function validateRolePayload(Request $request, int $businessId, ?Role $existingRole = null): array
+    {
+        if ($request->has('name') && is_string($request->input('name'))) {
+            $request->merge(['name' => trim($request->input('name'))]);
+        }
+
+        $validated = $request->validate([
+            'name'          => ['required', 'string', 'max:100'],
+            'permissions'   => ['nullable', 'array'],
+            'permissions.*' => ['string', 'exists:permissions,name'],
+        ]);
+
+        $nameLower = mb_strtolower($validated['name']);
+        $isSystemRole = $existingRole !== null && is_null($existingRole->business_id);
+
+        if (! $isSystemRole && in_array($nameLower, ['super_admin', 'admin', 'owner', 'cashier'], true)) {
+            throw ValidationException::withMessages([
+                'name' => ['This role name is reserved for system default roles.'],
+            ]);
+        }
+
+        if (! $isSystemRole) {
+            $duplicateQuery = Role::where('business_id', $businessId)
+                ->whereRaw('LOWER(TRIM(name)) = ?', [$nameLower]);
+
+            if ($existingRole !== null) {
+                $duplicateQuery->whereKeyNot($existingRole->id);
+            }
+
+            if ($duplicateQuery->exists()) {
+                throw ValidationException::withMessages([
+                    'name' => ['Role with this name already exists for your business.'],
+                ]);
+            }
+        }
+
+        if (! empty($validated['permissions'])) {
+            $validated['permissions'] = array_values(array_unique($validated['permissions']));
+        }
+
+        return $validated;
     }
 
     private function authorizeBusinessRole(Role $role): void

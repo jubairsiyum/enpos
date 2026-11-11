@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Support\CurrentBusiness;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class SaveOpeningStockRequest extends FormRequest
 {
@@ -42,5 +43,34 @@ class SaveOpeningStockRequest extends FormRequest
             'transaction_date'           => ['nullable', 'date_format:Y-m-d'],
             'additional_notes'           => ['nullable', 'string', 'max:1000'],
         ];
+    }
+
+    /**
+     * Prevent duplicate variation+location entries within a single opening stock submission.
+     */
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            $stocks = $this->input('stocks');
+            if (! is_array($stocks)) {
+                return;
+            }
+
+            $seenPairs = [];
+            foreach ($stocks as $index => $row) {
+                if (! is_array($row) || ! isset($row['variation_id'], $row['location_id'])) {
+                    continue;
+                }
+
+                $pairKey = ((int) $row['variation_id']) . ':' . ((int) $row['location_id']);
+                if (in_array($pairKey, $seenPairs, true)) {
+                    $validator->errors()->add(
+                        "stocks.{$index}.variation_id",
+                        'Duplicate variation and location entry in opening stock payload.'
+                    );
+                }
+                $seenPairs[] = $pairKey;
+            }
+        });
     }
 }

@@ -321,5 +321,74 @@ class UserManagementTest extends TestCase
             'is_cmmsn_agent' => true,
             'business_id'    => $this->businessA->id,
         ]);
+
+        // Duplicate commission agent with same phone or same name (without email) is rejected
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/sales-commission-agents', [
+                'first_name' => 'Agent',
+                'last_name'  => 'Smith',
+                'phone'      => '123456789',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['phone']);
+    }
+
+    public function test_user_and_role_anti_redundancy_validations(): void
+    {
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/users', [
+                'first_name'               => 'Cashier',
+                'last_name'                => 'One',
+                'email'                    => 'cashier1@example.test',
+                'username'                 => 'cashier_one',
+                'phone'                    => '+8801700000111',
+                'enable_service_staff_pin' => true,
+                'staff_pin'                => '4455',
+                'password'                 => 'secret123',
+                'password_confirmation'    => 'secret123',
+            ])
+            ->assertCreated();
+
+        // Duplicate phone & duplicate staff_pin in same business are rejected with 422
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/users', [
+                'first_name'               => 'Cashier',
+                'last_name'                => 'Two',
+                'email'                    => 'cashier2@example.test',
+                'phone'                    => '+8801700000111',
+                'enable_service_staff_pin' => true,
+                'staff_pin'                => '4455',
+                'password'                 => 'secret123',
+                'password_confirmation'    => 'secret123',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['phone', 'staff_pin']);
+
+        // Duplicate role & reserved system role names are rejected with 422
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/roles', [
+                'name' => 'Manager',
+            ])
+            ->assertCreated();
+
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/roles', [
+                'name' => 'manager',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['name']);
+
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/roles', [
+                'name' => 'admin',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['name']);
     }
 }

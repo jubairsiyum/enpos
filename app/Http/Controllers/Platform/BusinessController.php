@@ -29,9 +29,29 @@ class BusinessController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $normalized = [];
+        if ($request->has('name') && is_string($request->input('name'))) {
+            $normalized['name'] = trim($request->input('name'));
+        }
+        if ($request->has('owner_email') && is_string($request->input('owner_email'))) {
+            $normalized['owner_email'] = mb_strtolower(trim($request->input('owner_email')));
+        }
+        if ($request->has('email') && is_string($request->input('email'))) {
+            $normalized['email'] = mb_strtolower(trim($request->input('email')));
+        }
+        if ($normalized !== []) {
+            $request->merge($normalized);
+        }
+
+        $derivedSlug = $request->filled('slug')
+            ? trim((string) $request->input('slug'))
+            : Str::slug((string) $request->input('name'));
+
+        $request->merge(['slug' => $derivedSlug]);
+
         $validated = $request->validate([
-            'name'           => 'required|string|max:255',
-            'slug'           => 'nullable|string|unique:businesses|regex:/^[a-z0-9\-]+$/i',
+            'name'           => 'required|string|max:255|unique:businesses,name',
+            'slug'           => 'required|string|unique:businesses,slug|regex:/^[a-z0-9\-]+$/i',
             'email'          => 'nullable|email',
             'phone'          => 'nullable|string|max:20',
             'plan_id'        => 'required|exists:plans,id',

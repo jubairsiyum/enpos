@@ -354,4 +354,57 @@ class CustomerManagementTest extends TestCase
             ->get('/app/contacts/customer-groups')
             ->assertOk();
     }
+
+    public function test_duplicate_customer_contact_and_group_are_rejected(): void
+    {
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/customers', [
+                'first_name' => 'Unique',
+                'last_name'  => 'Client',
+                'mobile'     => '+8801711223344',
+                'email'      => 'unique-client@example.test',
+            ])
+            ->assertCreated();
+
+        // Resubmitting same mobile & email in same business is blocked cleanly
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/customers', [
+                'first_name' => 'Unique',
+                'last_name'  => 'Client',
+                'mobile'     => ' +8801711223344 ',
+                'email'      => 'UNIQUE-CLIENT@example.test',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['mobile', 'email']);
+
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/contacts', [
+                'type'   => 'supplier',
+                'name'   => 'Dup Supplier',
+                'mobile' => '+8801711223344',
+                'email'  => 'unique-client@example.test',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['mobile', 'email']);
+
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/customer-groups', [
+                'name'   => 'Corporate Tier',
+                'amount' => 10,
+            ])
+            ->assertCreated();
+
+        $this->actingAs($this->ownerA)
+            ->withHeader('X-Business', (string) $this->businessA->id)
+            ->postJson('/api/v1/shop/customer-groups', [
+                'name'   => 'corporate tier',
+                'amount' => 15,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['name']);
+    }
 }

@@ -34,11 +34,81 @@ class ProductService
         ?UploadedFile $brochure = null,
         array $variationImages = [],
     ): Product {
-        return DB::transaction(function () use ($businessId, $userId, $validated, $image, $brochure, $variationImages): Product {
+        return $this->createOrMergeProduct(
+            $businessId,
+            $userId,
+            $validated,
+            $image,
+            $brochure,
+            $variationImages,
+        )['product'];
+    }
+
+    /**
+     * Create a product or, if an active product with the same name and type already exists,
+     * increase its stock quantity instead of creating a duplicate product row.
+     *
+     * @param  array<string, mixed>  $validated
+     * @param  array<int, UploadedFile|null>  $variationImages
+     * @return array{product: Product, created: bool}
+     *
+     * @throws ValidationException
+     */
+    public function createOrMergeProduct(
+        int $businessId,
+        int $userId,
+        array $validated,
+        ?UploadedFile $image = null,
+        ?UploadedFile $brochure = null,
+        array $variationImages = [],
+    ): array {
+        return DB::transaction(function () use ($businessId, $userId, $validated, $image, $brochure, $variationImages): array {
             $type = $validated['type'] ?? 'single';
-            $sku = ! empty($validated['sku'])
-                ? (string) $validated['sku']
-                : Product::generateSku($businessId, 'AS');
+            $name = trim((string) $validated['name']);
+            $providedSku = ! empty($validated['sku']) ? trim((string) $validated['sku']) : null;
+
+            $bySku = $providedSku !== null
+                ? Product::where('business_id', $businessId)
+                    ->whereRaw('LOWER(TRIM(sku)) = ?', [mb_strtolower($providedSku)])
+                    ->lockForUpdate()
+                    ->first()
+                : null;
+
+            $byName = Product::where('business_id', $businessId)
+                ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])
+                ->lockForUpdate()
+                ->first();
+
+            if ($bySku !== null && mb_strtolower(trim($bySku->name)) !== mb_strtolower($name)) {
+                throw ValidationException::withMessages([
+                    'sku' => ["SKU '{$providedSku}' is already assigned to product '{$bySku->name}'."],
+                ]);
+            }
+
+            $existing = $byName ?? $bySku;
+
+            if ($existing !== null) {
+                if ($existing->type !== $type) {
+                    throw ValidationException::withMessages([
+                        'type' => ["Product '{$existing->name}' already exists as type '{$existing->type}' and cannot be duplicated as '{$type}'."],
+                    ]);
+                }
+
+                if (! $existing->enable_stock) {
+                    throw ValidationException::withMessages([
+                        'name' => ["Product '{$existing->name}' already exists."],
+                    ]);
+                }
+
+                $this->incrementExistingProductStock($existing, $businessId, $userId, $validated, $variationImages);
+
+                return [
+                    'product' => $existing->fresh($this->productRelations()),
+                    'created' => false,
+                ];
+            }
+
+            $sku = $providedSku ?? Product::generateSku($businessId, 'AS');
 
             $taxPercent = $this->resolveTaxPercent($businessId, $validated['tax_id'] ?? null);
             $defaultProfitPercent = $this->resolveDefaultProfitPercent($businessId, $validated['profit_percent'] ?? null);
@@ -58,7 +128,7 @@ class ProductService
             $product = Product::create([
                 'business_id'                 => $businessId,
                 'created_by'                  => $userId,
-                'name'                        => $validated['name'],
+                'name'                        => $name,
                 'type'                        => $type,
                 'sku'                         => $sku,
                 'barcode_type'                => $validated['barcode_type'] ?? 'C128',
@@ -93,18 +163,12 @@ class ProductService
 
             $this->syncVariationsOnCreate($product, $type, $validated, $pricing, $taxPercent, $defaultProfitPercent, $locationIds, $variationImages);
 
-            return $product->fresh([
-                'unit',
-                'subUnit',
-                'category',
-                'subCategory',
-                'brand',
-                'tax',
-                'warranty',
-                'locations',
-                'variations.locationDetails',
-                'variations.comboComponents.componentVariation.product',
-            ]);
+            $this->applyInitialStockQuantities($product, $businessId, $userId, $type, $validated, $locationIds);
+
+            return [
+                'product' => $product->fresh($this->productRelations()),
+                'created' => true,
+            ];
         });
     }
 
@@ -226,7 +290,7 @@ class ProductService
 
             $newSku = Product::generateSku($businessId, 'AS');
             $copy = $source->replicate(['sku', 'created_by']);
-            $copy->name = $source->name . ' (Copy)';
+            $copy->name = $this->generateUniqueCopyName($businessId, $source->name);
             $copy->sku = $newSku;
             $copy->created_by = $userId;
             $copy->save();
@@ -395,6 +459,8 @@ class ProductService
                         'qty_available' => (float) $stockDetail->qty_available,
                     ];
                 }
+
+                $locationTotal = (float) $transaction->purchaseLines()->sum('sub_total');
 
                 $transaction->update([
                     'transaction_date' => $date,
@@ -892,7 +958,11 @@ class ProductService
                 $minSell = $minSell === null ? $rowPricing['default_sell_price'] : min($minSell, $rowPricing['default_sell_price']);
             }
 
-            $product->variations()->whereNotIn('id', $keptIds)->delete();
+            $removedVariationIds = $product->variations()->whereNotIn('id', $keptIds)->pluck('id')->all();
+            if ($removedVariationIds !== []) {
+                $this->guardAndCleanupVariations($removedVariationIds);
+                $product->variations()->whereIn('id', $removedVariationIds)->delete();
+            }
             $product->update([
                 'default_purchase_price' => $minPurchase ?? 0,
                 'default_sell_price'     => $minSell ?? 0,
@@ -1021,6 +1091,289 @@ class ProductService
         foreach (array_unique($mediaPaths) as $path) {
             Storage::disk('public')->delete($path);
         }
+    }
+
+    /**
+     * Increment stock quantities for an existing product of the same type instead of duplicating it.
+     *
+     * @param  array<string, mixed>  $validated
+     * @param  array<int, UploadedFile|null>  $variationImages
+     */
+    private function incrementExistingProductStock(
+        Product $existing,
+        int $businessId,
+        int $userId,
+        array $validated,
+        array $variationImages,
+    ): void {
+        $existing->load(['variations', 'locations']);
+
+        $locationIds = ! empty($validated['location_ids'])
+            ? $validated['location_ids']
+            : ($existing->locations->pluck('id')->all() ?: $this->resolveLocationIds($businessId, null));
+
+        $existing->locations()->syncWithoutDetaching($locationIds);
+
+        $stockRows = [];
+
+        if ($existing->type === 'variable' && ! empty($validated['variations'])) {
+            $taxPercent = $this->resolveTaxPercent($businessId, $existing->tax_id);
+            $defaultProfitPercent = (float) $existing->profit_percent;
+
+            foreach ($validated['variations'] as $index => $row) {
+                $rowSku = ! empty($row['sku']) ? mb_strtolower(trim((string) $row['sku'])) : null;
+                $rowName = mb_strtolower(trim((string) ($row['name'] ?? '')));
+
+                $matched = $existing->variations->first(function (Variation $v) use ($rowSku, $rowName): bool {
+                    if ($rowSku !== null && mb_strtolower(trim((string) $v->sku)) === $rowSku) {
+                        return true;
+                    }
+
+                    return $rowName !== '' && mb_strtolower(trim((string) $v->name)) === $rowName;
+                });
+
+                if ($matched) {
+                    $addQty = isset($row['quantity'])
+                        ? (float) $row['quantity']
+                        : (isset($row['opening_stock']) ? (float) $row['opening_stock'] : 1.0);
+
+                    foreach ($locationIds as $locationId) {
+                        $currentOpening = $this->currentOpeningQuantity($existing->id, $matched->id, $locationId);
+                        $stockRows[] = [
+                            'variation_id'         => $matched->id,
+                            'location_id'          => $locationId,
+                            'quantity'             => round($currentOpening + $addQty, 4),
+                            'unit_cost_before_tax' => (float) ($row['default_purchase_price'] ?? $matched->default_purchase_price),
+                        ];
+                    }
+                } else {
+                    $rowProfit = isset($row['profit_percent']) ? (float) $row['profit_percent'] : $defaultProfitPercent;
+                    $rowPricing = $this->computePricing(
+                        purchaseExc: $row['default_purchase_price'] ?? 0,
+                        purchaseInc: $row['dpp_inc_tax'] ?? null,
+                        profitPercent: $rowProfit,
+                        sellExc: $row['default_sell_price'] ?? null,
+                        sellInc: $row['sell_price_inc_tax'] ?? null,
+                        taxPercent: $taxPercent,
+                    );
+
+                    $varImg = $variationImages[$index] ?? null;
+                    $varImgPath = $varImg ? $varImg->store('products/variations', 'public') : null;
+                    $nextIndex = $existing->variations->count() + 1;
+
+                    $newVariation = $existing->variations()->create([
+                        'name'                   => trim((string) $row['name']),
+                        'sku'                    => ! empty($row['sku']) ? trim((string) $row['sku']) : $existing->sku . '-' . $nextIndex,
+                        'default_purchase_price' => $rowPricing['default_purchase_price'],
+                        'dpp_inc_tax'            => $rowPricing['dpp_inc_tax'],
+                        'profit_percent'         => $rowPricing['profit_percent'],
+                        'default_sell_price'     => $rowPricing['default_sell_price'],
+                        'sell_price_inc_tax'     => $rowPricing['sell_price_inc_tax'],
+                        'variation_template_id'  => $row['variation_template_id'] ?? null,
+                        'variation_value_id'     => $row['variation_value_id'] ?? null,
+                        'image'                  => $varImgPath,
+                    ]);
+
+                    $this->ensureVariationLocationRows($existing->id, $newVariation->id, $locationIds);
+                    $existing->variations->push($newVariation);
+
+                    $initialQty = isset($row['quantity'])
+                        ? (float) $row['quantity']
+                        : (isset($row['opening_stock']) ? (float) $row['opening_stock'] : 1.0);
+
+                    if ($initialQty > 0) {
+                        foreach ($locationIds as $locationId) {
+                            $stockRows[] = [
+                                'variation_id'         => $newVariation->id,
+                                'location_id'          => $locationId,
+                                'quantity'             => round($initialQty, 4),
+                                'unit_cost_before_tax' => $rowPricing['default_purchase_price'],
+                            ];
+                        }
+                    }
+                }
+            }
+        } else {
+            $variation = $existing->variations->first();
+            if ($variation) {
+                $addQty = isset($validated['quantity'])
+                    ? (float) $validated['quantity']
+                    : (isset($validated['opening_stock']) ? (float) $validated['opening_stock'] : 1.0);
+
+                foreach ($locationIds as $locationId) {
+                    $currentOpening = $this->currentOpeningQuantity($existing->id, $variation->id, $locationId);
+                    $stockRows[] = [
+                        'variation_id'         => $variation->id,
+                        'location_id'          => $locationId,
+                        'quantity'             => round($currentOpening + $addQty, 4),
+                        'unit_cost_before_tax' => (float) ($validated['default_purchase_price'] ?? $variation->default_purchase_price),
+                    ];
+                }
+            }
+        }
+
+        if ($stockRows !== []) {
+            $this->saveOpeningStock($existing, $businessId, $userId, $stockRows);
+        }
+    }
+
+    /**
+     * Apply optional initial quantity / opening stock supplied during product creation.
+     *
+     * @param  array<string, mixed>  $validated
+     * @param  array<int, int>  $locationIds
+     */
+    private function applyInitialStockQuantities(
+        Product $product,
+        int $businessId,
+        int $userId,
+        string $type,
+        array $validated,
+        array $locationIds,
+    ): void {
+        if (! $product->enable_stock || $locationIds === []) {
+            return;
+        }
+
+        $product->load('variations');
+        $stockRows = [];
+
+        if ($type === 'variable' && ! empty($validated['variations'])) {
+            foreach ($validated['variations'] as $row) {
+                $qty = isset($row['quantity'])
+                    ? (float) $row['quantity']
+                    : (isset($row['opening_stock']) ? (float) $row['opening_stock'] : 0.0);
+
+                if ($qty <= 0) {
+                    continue;
+                }
+
+                $rowName = mb_strtolower(trim((string) ($row['name'] ?? '')));
+                $variation = $product->variations->first(
+                    fn (Variation $v): bool => mb_strtolower(trim((string) $v->name)) === $rowName
+                );
+
+                if (! $variation) {
+                    continue;
+                }
+
+                foreach ($locationIds as $locationId) {
+                    $stockRows[] = [
+                        'variation_id'         => $variation->id,
+                        'location_id'          => $locationId,
+                        'quantity'             => round($qty, 4),
+                        'unit_cost_before_tax' => (float) $variation->default_purchase_price,
+                    ];
+                }
+            }
+        } else {
+            $qty = isset($validated['quantity'])
+                ? (float) $validated['quantity']
+                : (isset($validated['opening_stock']) ? (float) $validated['opening_stock'] : 0.0);
+
+            $variation = $product->variations->first();
+            if ($qty > 0 && $variation) {
+                foreach ($locationIds as $locationId) {
+                    $stockRows[] = [
+                        'variation_id'         => $variation->id,
+                        'location_id'          => $locationId,
+                        'quantity'             => round($qty, 4),
+                        'unit_cost_before_tax' => (float) $variation->default_purchase_price,
+                    ];
+                }
+            }
+        }
+
+        if ($stockRows !== []) {
+            $this->saveOpeningStock($product, $businessId, $userId, $stockRows);
+        }
+    }
+
+    private function currentOpeningQuantity(int $productId, int $variationId, int $locationId): float
+    {
+        $openingLine = PurchaseLine::query()
+            ->where('product_id', $productId)
+            ->where('variation_id', $variationId)
+            ->whereHas('transaction', function ($q) use ($locationId): void {
+                $q->withoutGlobalScope('business')
+                    ->where('type', 'opening_stock')
+                    ->where('location_id', $locationId);
+            })
+            ->first();
+
+        if ($openingLine) {
+            return (float) $openingLine->quantity;
+        }
+
+        $detail = VariationLocationDetail::where('variation_id', $variationId)
+            ->where('location_id', $locationId)
+            ->first();
+
+        return $detail ? (float) $detail->qty_available : 0.0;
+    }
+
+    /**
+     * Block deletion of variations referenced by sales/purchases; clean up opening-stock lines.
+     *
+     * @param  array<int, int>  $variationIds
+     *
+     * @throws ValidationException
+     */
+    private function guardAndCleanupVariations(array $variationIds): void
+    {
+        $hasSellLines = SellLine::whereIn('variation_id', $variationIds)->exists();
+        $hasNonOpeningPurchases = PurchaseLine::whereIn('variation_id', $variationIds)
+            ->whereDoesntHave('transaction', function ($q): void {
+                $q->withoutGlobalScope('business')
+                    ->withTrashed()
+                    ->where('type', 'opening_stock');
+            })
+            ->exists();
+
+        if ($hasSellLines || $hasNonOpeningPurchases) {
+            throw ValidationException::withMessages([
+                'variations' => ['Cannot remove variations that already have purchase or sales transactions.'],
+            ]);
+        }
+
+        PurchaseLine::whereIn('variation_id', $variationIds)->delete();
+        ComboProductComponent::whereIn('component_variation_id', $variationIds)->delete();
+    }
+
+    private function generateUniqueCopyName(int $businessId, string $sourceName): string
+    {
+        $base = trim($sourceName) . ' (Copy)';
+        $candidate = $base;
+        $counter = 2;
+
+        while (Product::where('business_id', $businessId)
+            ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($candidate)])
+            ->exists()
+        ) {
+            $candidate = trim($sourceName) . " (Copy {$counter})";
+            $counter++;
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function productRelations(): array
+    {
+        return [
+            'unit',
+            'subUnit',
+            'category',
+            'subCategory',
+            'brand',
+            'tax',
+            'warranty',
+            'locations',
+            'variations.locationDetails',
+            'variations.comboComponents.componentVariation.product',
+        ];
     }
 
     /**

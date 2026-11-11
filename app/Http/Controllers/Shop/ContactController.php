@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -134,47 +135,22 @@ class ContactController extends Controller
     public function store(Request $request): JsonResponse|RedirectResponse
     {
         $businessId = $this->currentBusiness->id();
+        $validated = $this->validateContactPayload($request, $businessId);
 
-        $validated = $request->validate([
-            'type'                   => ['required', Rule::in(['supplier', 'customer', 'both'])],
-            'name'                   => ['nullable', 'string', 'max:255'],
-            'supplier_business_name' => ['nullable', 'string', 'max:255'],
-            'prefix'                 => ['nullable', 'string', 'max:10'],
-            'first_name'             => ['nullable', 'string', 'max:255'],
-            'last_name'              => ['nullable', 'string', 'max:255'],
-            'email'                  => ['nullable', 'email', 'max:255'],
-            'mobile'                 => ['nullable', 'string', 'max:20'],
-            'landline'               => ['nullable', 'string', 'max:20'],
-            'alternate_number'       => ['nullable', 'string', 'max:20'],
-            'tax_number'             => ['nullable', 'string', 'max:100'],
-            'opening_balance'        => ['nullable', 'numeric', 'min:0'],
-            'pay_term'               => ['nullable', 'integer', 'min:1'],
-            'address_line_1'         => ['nullable', 'string', 'max:500'],
-            'address_line_2'         => ['nullable', 'string', 'max:500'],
-            'city'                   => ['nullable', 'string', 'max:100'],
-            'state'                  => ['nullable', 'string', 'max:100'],
-            'country'                => ['nullable', 'string', 'max:100'],
-            'zip_code'               => ['nullable', 'string', 'max:20'],
-            'shipping_address'       => ['nullable', 'string'],
-            'custom_field1'          => ['nullable', 'string'],
-            'custom_field2'          => ['nullable', 'string'],
-            'custom_field3'          => ['nullable', 'string'],
-            'custom_field4'          => ['nullable', 'string'],
-            'custom_field5'          => ['nullable', 'string'],
-            'custom_field6'          => ['nullable', 'string'],
-            'custom_field7'          => ['nullable', 'string'],
-            'custom_field8'          => ['nullable', 'string'],
-            'custom_field9'          => ['nullable', 'string'],
-            'custom_field10'         => ['nullable', 'string'],
-        ]);
-
-        // Compose the name from first/last if not provided directly
+        // Compose the name from first/last/business if not provided directly
         if (empty($validated['name'])) {
-            $validated['name'] = trim(
-                ($validated['prefix'] ? $validated['prefix'] . ' ' : '') .
+            $composed = trim(
+                (! empty($validated['prefix']) ? $validated['prefix'] . ' ' : '') .
                 ($validated['first_name'] ?? '') . ' ' .
                 ($validated['last_name'] ?? '')
             );
+            $validated['name'] = $composed !== ''
+                ? $composed
+                : ($validated['supplier_business_name'] ?? $validated['mobile']);
+        }
+
+        if (empty($validated['contact_id'])) {
+            $validated['contact_id'] = Contact::generateContactId($businessId, 'CO');
         }
 
         $contact = Contact::create(array_merge($validated, [
@@ -214,38 +190,8 @@ class ContactController extends Controller
     public function update(Request $request, Contact $contact): JsonResponse|RedirectResponse
     {
         $this->authorizeContact($contact);
-
-        $validated = $request->validate([
-            'type'                   => ['sometimes', Rule::in(['supplier', 'customer', 'both'])],
-            'name'                   => ['nullable', 'string', 'max:255'],
-            'supplier_business_name' => ['nullable', 'string', 'max:255'],
-            'prefix'                 => ['nullable', 'string', 'max:10'],
-            'first_name'             => ['nullable', 'string', 'max:255'],
-            'last_name'              => ['nullable', 'string', 'max:255'],
-            'email'                  => ['nullable', 'email', 'max:255'],
-            'mobile'                 => ['nullable', 'string', 'max:20'],
-            'landline'               => ['nullable', 'string', 'max:20'],
-            'alternate_number'       => ['nullable', 'string', 'max:20'],
-            'tax_number'             => ['nullable', 'string', 'max:100'],
-            'opening_balance'        => ['nullable', 'numeric', 'min:0'],
-            'address_line_1'         => ['nullable', 'string', 'max:500'],
-            'address_line_2'         => ['nullable', 'string', 'max:500'],
-            'city'                   => ['nullable', 'string', 'max:100'],
-            'state'                  => ['nullable', 'string', 'max:100'],
-            'country'                => ['nullable', 'string', 'max:100'],
-            'zip_code'               => ['nullable', 'string', 'max:20'],
-            'shipping_address'       => ['nullable', 'string'],
-            'custom_field1'          => ['nullable', 'string'],
-            'custom_field2'          => ['nullable', 'string'],
-            'custom_field3'          => ['nullable', 'string'],
-            'custom_field4'          => ['nullable', 'string'],
-            'custom_field5'          => ['nullable', 'string'],
-            'custom_field6'          => ['nullable', 'string'],
-            'custom_field7'          => ['nullable', 'string'],
-            'custom_field8'          => ['nullable', 'string'],
-            'custom_field9'          => ['nullable', 'string'],
-            'custom_field10'         => ['nullable', 'string'],
-        ]);
+        $businessId = $this->currentBusiness->id();
+        $validated = $this->validateContactPayload($request, $businessId, $contact);
 
         if (isset($validated['first_name']) || isset($validated['last_name'])) {
             if (empty($validated['name'])) {
@@ -339,6 +285,97 @@ class ContactController extends Controller
     | Private helpers
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Validate and normalize contact payloads with per-business uniqueness checks.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws ValidationException
+     */
+    private function validateContactPayload(Request $request, int $businessId, ?Contact $existing = null): array
+    {
+        $normalized = [];
+
+        foreach (['name', 'supplier_business_name', 'prefix', 'first_name', 'last_name', 'mobile', 'alternate_number', 'landline', 'contact_id', 'tax_number'] as $field) {
+            if ($request->has($field) && is_string($request->input($field))) {
+                $trimmed = trim($request->input($field));
+                $normalized[$field] = $trimmed === '' ? null : $trimmed;
+            }
+        }
+        if ($request->has('email') && is_string($request->input('email'))) {
+            $trimmedEmail = mb_strtolower(trim($request->input('email')));
+            $normalized['email'] = $trimmedEmail === '' ? null : $trimmedEmail;
+        }
+        if ($normalized !== []) {
+            $request->merge($normalized);
+        }
+
+        $mobileRule = Rule::unique('contacts', 'mobile')
+            ->where('business_id', $businessId)
+            ->whereNull('deleted_at');
+        $emailRule = Rule::unique('contacts', 'email')
+            ->where('business_id', $businessId)
+            ->whereNull('deleted_at');
+        $contactIdRule = Rule::unique('contacts', 'contact_id')
+            ->where('business_id', $businessId)
+            ->whereNull('deleted_at');
+
+        if ($existing !== null) {
+            $mobileRule->ignore($existing->id);
+            $emailRule->ignore($existing->id);
+            $contactIdRule->ignore($existing->id);
+        }
+
+        $rules = [
+            'type'                   => [$existing === null ? 'required' : 'sometimes', Rule::in(['supplier', 'customer', 'both'])],
+            'entity_type'            => ['nullable', Rule::in(['individual', 'business'])],
+            'contact_id'             => ['nullable', 'string', 'max:50', $contactIdRule],
+            'customer_group_id'      => ['nullable', 'integer', Rule::exists('customer_groups', 'id')->where('business_id', $businessId)],
+            'name'                   => ['nullable', 'string', 'max:255'],
+            'supplier_business_name' => ['nullable', 'string', 'max:255'],
+            'prefix'                 => ['nullable', 'string', 'max:10'],
+            'first_name'             => ['nullable', 'string', 'max:255'],
+            'last_name'              => ['nullable', 'string', 'max:255'],
+            'email'                  => ['nullable', 'email', 'max:255', $emailRule],
+            'mobile'                 => ['nullable', 'string', 'max:20', $mobileRule],
+            'landline'               => ['nullable', 'string', 'max:20'],
+            'alternate_number'       => ['nullable', 'string', 'max:20'],
+            'tax_number'             => ['nullable', 'string', 'max:100'],
+            'opening_balance'        => ['nullable', 'numeric', 'min:0'],
+            'pay_term'               => ['nullable', 'integer', 'min:1'],
+            'pay_term_number'        => ['nullable', 'integer', 'min:1', 'max:65535'],
+            'pay_term_type'          => ['nullable', Rule::in(['days', 'months'])],
+            'credit_limit'           => ['nullable', 'numeric', 'min:0'],
+            'address_line_1'         => ['nullable', 'string', 'max:500'],
+            'address_line_2'         => ['nullable', 'string', 'max:500'],
+            'city'                   => ['nullable', 'string', 'max:100'],
+            'state'                  => ['nullable', 'string', 'max:100'],
+            'country'                => ['nullable', 'string', 'max:100'],
+            'zip_code'               => ['nullable', 'string', 'max:20'],
+            'shipping_address'       => ['nullable', 'string'],
+        ];
+
+        for ($i = 1; $i <= 10; $i++) {
+            $rules["custom_field{$i}"] = ['nullable', 'string'];
+        }
+
+        $validated = $request->validate($rules);
+
+        if (
+            $existing === null &&
+            empty($validated['name']) &&
+            empty($validated['first_name']) &&
+            empty($validated['supplier_business_name']) &&
+            empty($validated['mobile'])
+        ) {
+            throw ValidationException::withMessages([
+                'name' => ['Please provide a name, business name, or mobile number for the contact.'],
+            ]);
+        }
+
+        return $validated;
+    }
 
     private function authorizeContact(Contact $contact): void
     {
