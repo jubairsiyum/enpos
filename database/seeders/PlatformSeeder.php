@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Models\Business;
+use App\Models\Location;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -104,6 +106,23 @@ class PlatformSeeder extends Seeder
                 'amount'        => $enterprise->price,
                 'starts_at'     => now(),
                 'ends_at'       => now()->addYear(),
+            ]
+        );
+
+        // Default Location & Unit for demo shop
+        Location::withoutGlobalScope('business')->firstOrCreate(
+            ['business_id' => $demoBusiness->id, 'location_id' => 'LOC-001'],
+            [
+                'name'      => 'Awesome Shop',
+                'is_active' => true,
+            ]
+        );
+
+        Unit::withoutGlobalScope('business')->firstOrCreate(
+            ['business_id' => $demoBusiness->id, 'short_name' => 'Pieces'],
+            [
+                'actual_name'   => 'Pieces',
+                'allow_decimal' => false,
             ]
         );
 

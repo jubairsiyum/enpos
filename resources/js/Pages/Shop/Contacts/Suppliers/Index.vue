@@ -1,8 +1,10 @@
 <script setup>
-import { ref, reactive, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, reactive, watch } from 'vue'
 import { Head, router, useForm } from '@inertiajs/vue3'
 import AppLayout from '@/Layouts/AppLayout.vue'
 import DataTableActions from '@/Components/DataTableActions.vue'
+import ContactActionDropdown from '@/Components/Contacts/ContactActionDropdown.vue'
+import ContactActionModals from '@/Components/Contacts/ContactActionModals.vue'
 
 defineOptions({ layout: AppLayout })
 
@@ -15,8 +17,23 @@ const props = defineProps({
 const search  = ref(props.filters.search ?? '')
 const perPage = ref(props.filters.per_page ?? 25)
 
-const isModalOpen    = ref(false)
-const editingContact = ref(null)
+const isModalOpen      = ref(false)
+const editingContact   = ref(null)
+const openActionMenuId = ref(null)
+const payingContact    = ref(null)
+const detailContact    = ref(null)
+const detailInitialTab = ref('overview')
+
+const toggleActionMenu = (id) => {
+    openActionMenuId.value = openActionMenuId.value === id ? null : id
+}
+
+const closeActionMenuOnOutsideClick = () => {
+    openActionMenuId.value = null
+}
+
+onMounted(() => window.addEventListener('click', closeActionMenuOnOutsideClick))
+onBeforeUnmount(() => window.removeEventListener('click', closeActionMenuOnOutsideClick))
 
 // ── columns for DataTable export / visibility toggle ─────────────────────────
 const columns = reactive([
@@ -106,28 +123,29 @@ const openCreateModal = () => {
 }
 
 const openEditModal = (contact) => {
+    openActionMenuId.value = null
     editingContact.value = contact
     form.clearErrors()
     form.type                   = contact.type ?? 'supplier'
-    form.contact_type_individual = 'individual'
+    form.contact_type_individual = contact.entity_type ?? 'individual'
     form.supplier_business_name = contact.supplier_business_name ?? ''
-    form.prefix                 = ''
-    form.first_name             = contact.name?.split(' ')[0] ?? ''
-    form.last_name              = contact.name?.split(' ').slice(1).join(' ') ?? ''
+    form.prefix                 = contact.prefix ?? ''
+    form.first_name             = contact.first_name ?? contact.name?.split(' ')[0] ?? ''
+    form.last_name              = contact.last_name ?? contact.name?.split(' ').slice(1).join(' ') ?? ''
     form.email                  = contact.email ?? ''
     form.mobile                 = contact.mobile ?? ''
-    form.landline               = ''
-    form.alternate_number       = ''
+    form.landline               = contact.landline ?? ''
+    form.alternate_number       = contact.alternate_number ?? ''
     form.tax_number             = contact.tax_number ?? ''
     form.opening_balance        = contact.opening_balance ?? ''
-    form.pay_term               = ''
-    form.address_line_1         = ''
-    form.address_line_2         = ''
-    form.city                   = ''
-    form.state                  = ''
-    form.country                = ''
-    form.zip_code               = ''
-    form.shipping_address       = ''
+    form.pay_term               = contact.pay_term_number ?? ''
+    form.address_line_1         = contact.address_line_1 ?? ''
+    form.address_line_2         = contact.address_line_2 ?? ''
+    form.city                   = contact.city ?? ''
+    form.state                  = contact.state ?? ''
+    form.country                = contact.country ?? ''
+    form.zip_code               = contact.zip_code ?? ''
+    form.shipping_address       = contact.shipping_address ?? ''
     form.custom_field1          = contact.custom_field1 ?? ''
     form.custom_field2          = contact.custom_field2 ?? ''
     form.custom_field3          = contact.custom_field3 ?? ''
@@ -162,8 +180,40 @@ const submitForm = () => {
 }
 
 const deleteContact = (contact) => {
+    openActionMenuId.value = null
     if (confirm(`Are you sure you want to delete contact "${contact.name}"?`)) {
         router.delete(route('shop.contacts.destroy', contact.id))
+    }
+}
+
+const openPayModal = (contact) => {
+    openActionMenuId.value = null
+    payingContact.value = contact
+}
+
+const openDetailModal = (contact, tab = 'overview') => {
+    openActionMenuId.value = null
+    detailInitialTab.value = tab
+    detailContact.value = contact
+}
+
+const toggleContactStatus = (contact) => {
+    openActionMenuId.value = null
+    const verb = contact.contact_status === 'inactive' ? 'activate' : 'deactivate'
+    if (confirm(`Are you sure you want to ${verb} "${contact.name}"?`)) {
+        router.post(route('shop.contacts.toggle-status', contact.id), {}, { preserveScroll: true })
+    }
+}
+
+const restoreContact = (contact) => {
+    openActionMenuId.value = null
+    router.post(route('shop.contacts.restore', contact.id))
+}
+
+const forceDeleteContact = (contact) => {
+    openActionMenuId.value = null
+    if (confirm(`Permanently delete contact "${contact.name}"? This cannot be undone.`)) {
+        router.delete(route('shop.contacts.force-delete', contact.id))
     }
 }
 
@@ -252,7 +302,7 @@ const totalPurchaseReturnDue = () => props.contacts.data.reduce((s, c) => s + pa
             </div>
 
             <!-- Table -->
-            <div class="overflow-x-auto">
+            <div :class="openActionMenuId ? 'overflow-x-auto pb-64' : 'overflow-x-auto pb-8'">
                 <table class="w-full text-left text-xs border-collapse">
                     <thead>
                         <tr class="border-y border-gray-200 bg-gray-50/50 text-[11px] font-semibold text-gray-700 uppercase tracking-wider">
@@ -286,24 +336,23 @@ const totalPurchaseReturnDue = () => props.contacts.data.reduce((s, c) => s + pa
                         >
                             <!-- Action -->
                             <td class="py-3 px-3 text-center">
-                                <div class="inline-flex items-center gap-1 justify-center">
-                                    <button
-                                        v-if="can.edit"
-                                        type="button"
-                                        @click="openEditModal(contact)"
-                                        class="px-2.5 py-1 border border-indigo-500 text-indigo-600 hover:bg-indigo-50 rounded text-[11px] font-medium transition"
-                                    >
-                                        ✏️ Edit
-                                    </button>
-                                    <button
-                                        v-if="can.delete"
-                                        type="button"
-                                        @click="deleteContact(contact)"
-                                        class="px-2.5 py-1 border border-red-400 text-red-500 hover:bg-red-50 rounded text-[11px] font-medium transition"
-                                    >
-                                        🗑️ Delete
-                                    </button>
-                                </div>
+                                <ContactActionDropdown
+                                    :contact="contact"
+                                    :is-open="openActionMenuId === contact.id"
+                                    :can-edit="Boolean(can.edit)"
+                                    :can-delete="Boolean(can.delete)"
+                                    @toggle="toggleActionMenu(contact.id)"
+                                    @pay="openPayModal"
+                                    @view="(c) => openDetailModal(c, 'overview')"
+                                    @edit="openEditModal"
+                                    @delete="deleteContact"
+                                    @toggle-status="toggleContactStatus"
+                                    @ledger="(c) => openDetailModal(c, 'ledger')"
+                                    @sales="(c) => openDetailModal(c, 'sales')"
+                                    @documents="(c) => openDetailModal(c, 'documents')"
+                                    @restore="restoreContact"
+                                    @force-delete="forceDeleteContact"
+                                />
                             </td>
                             <td v-if="isVisible('contact_id')"             class="py-3 px-3 font-medium text-gray-900">{{ contact.contact_id }}</td>
                             <td v-if="isVisible('supplier_business_name')" class="py-3 px-3">{{ contact.supplier_business_name ?? '-' }}</td>
@@ -630,4 +679,12 @@ const totalPurchaseReturnDue = () => props.contacts.data.reduce((s, c) => s + pa
             </div>
         </div>
     </Teleport>
+
+    <ContactActionModals
+        :pay-contact="payingContact"
+        :detail-contact="detailContact"
+        :initial-tab="detailInitialTab"
+        @close-pay="payingContact = null"
+        @close-detail="detailContact = null"
+    />
 </template>

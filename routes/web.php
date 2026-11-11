@@ -55,11 +55,58 @@ Route::prefix('app')
         Route::resource('roles', \App\Http\Controllers\Shop\RoleController::class);
         Route::resource('sales-commission-agents', \App\Http\Controllers\Shop\SalesCommissionAgentController::class);
 
-        // Contacts (Suppliers / Customers)
+        // Contacts (Suppliers / Customers / Customer Groups)
+        Route::post('contacts/customers/{id}/restore', [\App\Http\Controllers\Shop\CustomerController::class, 'restore'])->name('customers.restore');
+        Route::delete('contacts/customers/{id}/force-delete', [\App\Http\Controllers\Shop\CustomerController::class, 'forceDelete'])->name('customers.force-delete');
+        Route::resource('contacts/customers', \App\Http\Controllers\Shop\CustomerController::class)
+            ->parameters(['customers' => 'customer'])
+            ->names('customers')
+            ->only(['index', 'store', 'show', 'update', 'destroy']);
+
+        Route::resource('contacts/customer-groups', \App\Http\Controllers\Shop\CustomerGroupController::class)
+            ->parameters(['customer-groups' => 'customerGroup'])
+            ->names('customer-groups')
+            ->only(['index', 'store', 'show', 'update', 'destroy']);
+
+        Route::get('contacts/import', [\App\Http\Controllers\Shop\ImportContactController::class, 'index'])->name('import-contacts.index');
+        Route::post('contacts/import', [\App\Http\Controllers\Shop\ImportContactController::class, 'store'])->name('import-contacts.store');
+        Route::get('contacts/import/template', [\App\Http\Controllers\Shop\ImportContactController::class, 'downloadTemplate'])->name('import-contacts.template');
+
+        Route::post('contacts/{contact}/pay', [\App\Http\Controllers\Shop\ContactActionController::class, 'pay'])->name('contacts.pay');
+        Route::post('contacts/{contact}/toggle-status', [\App\Http\Controllers\Shop\ContactActionController::class, 'toggleStatus'])->name('contacts.toggle-status');
+        Route::get('contacts/{contact}/ledger', [\App\Http\Controllers\Shop\ContactActionController::class, 'ledger'])->name('contacts.ledger');
+        Route::get('contacts/{contact}/sales', [\App\Http\Controllers\Shop\ContactActionController::class, 'sales'])->name('contacts.sales');
+        Route::get('contacts/{contact}/documents', [\App\Http\Controllers\Shop\ContactActionController::class, 'documents'])->name('contacts.documents.index');
+        Route::post('contacts/{contact}/documents', [\App\Http\Controllers\Shop\ContactActionController::class, 'storeDocument'])->name('contacts.documents.store');
+        Route::get('contacts/{contact}/documents/{document}/download', [\App\Http\Controllers\Shop\ContactActionController::class, 'downloadDocument'])->name('contacts.documents.download');
+        Route::delete('contacts/{contact}/documents/{document}', [\App\Http\Controllers\Shop\ContactActionController::class, 'destroyDocument'])->name('contacts.documents.destroy');
+
         Route::post('contacts/{id}/restore', [\App\Http\Controllers\Shop\ContactController::class, 'restore'])->name('contacts.restore');
         Route::delete('contacts/{id}/force-delete', [\App\Http\Controllers\Shop\ContactController::class, 'forceDelete'])->name('contacts.force-delete');
         Route::resource('contacts', \App\Http\Controllers\Shop\ContactController::class)
             ->only(['index', 'store', 'show', 'update', 'destroy']);
+
+        // Products (List Products & Add Product)
+        Route::get('products/create', [\App\Http\Controllers\Shop\AddProductController::class, 'create'])->name('products.create');
+        Route::post('products/quick-units', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreUnit'])->name('products.quick-units');
+        Route::post('products/quick-brands', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreBrand'])->name('products.quick-brands');
+        Route::post('products/bulk-delete', [\App\Http\Controllers\Shop\ProductController::class, 'bulkDestroy'])->name('products.bulk-delete');
+        Route::post('products/bulk-location', [\App\Http\Controllers\Shop\ProductController::class, 'bulkLocation'])->name('products.bulk-location');
+        Route::post('products/bulk-status', [\App\Http\Controllers\Shop\ProductController::class, 'bulkToggleStatus'])->name('products.bulk-status');
+        Route::post('products/bulk-woocommerce-sync', [\App\Http\Controllers\Shop\ProductController::class, 'bulkWooCommerceSync'])->name('products.bulk-woocommerce-sync');
+        Route::post('products/{id}/restore', [\App\Http\Controllers\Shop\ProductController::class, 'restore'])->name('products.restore');
+        Route::delete('products/{id}/force-delete', [\App\Http\Controllers\Shop\ProductController::class, 'forceDelete'])->name('products.force-delete');
+        Route::post('products/{product}/duplicate', [\App\Http\Controllers\Shop\ProductController::class, 'duplicate'])->name('products.duplicate');
+        Route::get('products/{product}/opening-stock', [\App\Http\Controllers\Shop\ProductController::class, 'openingStock'])->name('products.opening-stock');
+        Route::post('products/{product}/opening-stock', [\App\Http\Controllers\Shop\ProductController::class, 'saveOpeningStock'])->name('products.save-opening-stock');
+        Route::get('products/{product}/stock-history', [\App\Http\Controllers\Shop\ProductController::class, 'stockHistory'])->name('products.stock-history');
+        Route::get('products/{product}/labels', [\App\Http\Controllers\Shop\ProductController::class, 'labels'])->name('products.labels');
+        Route::get('products', [\App\Http\Controllers\Shop\ProductController::class, 'index'])->name('products.index');
+        Route::post('products', [\App\Http\Controllers\Shop\AddProductController::class, 'store'])->name('products.store');
+        Route::get('products/{product}', [\App\Http\Controllers\Shop\ProductController::class, 'show'])->name('products.show');
+        Route::get('products/{product}/edit', [\App\Http\Controllers\Shop\ProductController::class, 'edit'])->name('products.edit');
+        Route::match(['put', 'patch'], 'products/{product}', [\App\Http\Controllers\Shop\ProductController::class, 'update'])->name('products.update');
+        Route::delete('products/{product}', [\App\Http\Controllers\Shop\ProductController::class, 'destroy'])->name('products.destroy');
 
         // Remaining routes will be added per module
         Route::get('/{any}', fn () => Inertia::render('Shop/Dashboard'))

@@ -66,9 +66,44 @@ Route::prefix('v1')->group(function () {
             // Contacts
             Route::post('contacts/{id}/restore',      [\App\Http\Controllers\Shop\ContactController::class, 'restore']);
             Route::delete('contacts/{id}/force-delete', [\App\Http\Controllers\Shop\ContactController::class, 'forceDelete']);
+            Route::post('contacts/{contact}/pay', [\App\Http\Controllers\Shop\ContactActionController::class, 'pay']);
+            Route::post('contacts/{contact}/toggle-status', [\App\Http\Controllers\Shop\ContactActionController::class, 'toggleStatus']);
+            Route::get('contacts/{contact}/ledger', [\App\Http\Controllers\Shop\ContactActionController::class, 'ledger']);
+            Route::get('contacts/{contact}/sales', [\App\Http\Controllers\Shop\ContactActionController::class, 'sales']);
+            Route::get('contacts/{contact}/documents', [\App\Http\Controllers\Shop\ContactActionController::class, 'documents']);
+            Route::post('contacts/{contact}/documents', [\App\Http\Controllers\Shop\ContactActionController::class, 'storeDocument']);
+            Route::get('contacts/{contact}/documents/{document}/download', [\App\Http\Controllers\Shop\ContactActionController::class, 'downloadDocument']);
+            Route::delete('contacts/{contact}/documents/{document}', [\App\Http\Controllers\Shop\ContactActionController::class, 'destroyDocument']);
             Route::apiResource('contacts', \App\Http\Controllers\Shop\ContactController::class);
 
-            // Products
+            // Customers & Customer Groups (under Contacts)
+            Route::post('customers/{id}/restore',       [\App\Http\Controllers\Shop\CustomerController::class, 'restore']);
+            Route::delete('customers/{id}/force-delete', [\App\Http\Controllers\Shop\CustomerController::class, 'forceDelete']);
+            Route::apiResource('customers', \App\Http\Controllers\Shop\CustomerController::class);
+            Route::apiResource('customer-groups', \App\Http\Controllers\Shop\CustomerGroupController::class);
+
+            // Import Contacts (under Contacts)
+            Route::get('import-contacts', [\App\Http\Controllers\Shop\ImportContactController::class, 'index']);
+            Route::post('import-contacts', [\App\Http\Controllers\Shop\ImportContactController::class, 'store']);
+            Route::get('import-contacts/template', [\App\Http\Controllers\Shop\ImportContactController::class, 'downloadTemplate']);
+
+            // Products (List Products & Add Product)
+            Route::get('products/add-options', [\App\Http\Controllers\Shop\AddProductController::class, 'formOptions']);
+            Route::post('products/add', [\App\Http\Controllers\Shop\AddProductController::class, 'store']);
+            Route::post('products/quick-units', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreUnit']);
+            Route::post('products/quick-brands', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreBrand']);
+            Route::get('products/stock-report', [\App\Http\Controllers\Shop\ProductController::class, 'stockReport']);
+            Route::post('products/bulk-delete', [\App\Http\Controllers\Shop\ProductController::class, 'bulkDestroy']);
+            Route::post('products/bulk-location', [\App\Http\Controllers\Shop\ProductController::class, 'bulkLocation']);
+            Route::post('products/bulk-status', [\App\Http\Controllers\Shop\ProductController::class, 'bulkToggleStatus']);
+            Route::post('products/bulk-woocommerce-sync', [\App\Http\Controllers\Shop\ProductController::class, 'bulkWooCommerceSync']);
+            Route::post('products/{id}/restore', [\App\Http\Controllers\Shop\ProductController::class, 'restore']);
+            Route::delete('products/{id}/force-delete', [\App\Http\Controllers\Shop\ProductController::class, 'forceDelete']);
+            Route::post('products/{product}/duplicate', [\App\Http\Controllers\Shop\ProductController::class, 'duplicate']);
+            Route::get('products/{product}/opening-stock', [\App\Http\Controllers\Shop\ProductController::class, 'openingStock']);
+            Route::post('products/{product}/opening-stock', [\App\Http\Controllers\Shop\ProductController::class, 'saveOpeningStock']);
+            Route::get('products/{product}/stock-history', [\App\Http\Controllers\Shop\ProductController::class, 'stockHistory']);
+            Route::get('products/{product}/labels', [\App\Http\Controllers\Shop\ProductController::class, 'labels']);
             Route::apiResource('products', \App\Http\Controllers\Shop\ProductController::class);
 
             // Purchases

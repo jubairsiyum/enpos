@@ -7,8 +7,9 @@ const user = computed(() => page.props.auth?.user)
 const business = computed(() => page.props.auth?.business)
 
 const openSubmenus = ref({
-    user_management: true,
-    contact: false,
+    user_management: ! page.url?.startsWith('/app/contacts') && ! page.url?.startsWith('/app/products'),
+    contact: page.url?.startsWith('/app/contacts') ?? false,
+    products: page.url?.startsWith('/app/products') ?? false,
 })
 
 const toggleSubmenu = (module) => {
@@ -22,10 +23,26 @@ const userManagementLinks = [
 ]
 
 const contactLinks = [
-    { label: 'Suppliers', href: 'shop.contacts.index', params: { type: 'supplier' }, pattern: '/app/contacts', icon: '🏭' },
+    { label: 'Suppliers', href: 'shop.contacts.index', params: { type: 'supplier' }, pattern: '/app/contacts', exactExclude: ['/app/contacts/customers', '/app/contacts/customer-groups', '/app/contacts/import'], icon: '🏭' },
+    { label: 'Customers', href: 'shop.customers.index', params: {}, pattern: '/app/contacts/customers', icon: '🧑‍🤝‍🧑' },
+    { label: 'Customer Groups', href: 'shop.customer-groups.index', params: {}, pattern: '/app/contacts/customer-groups', icon: '🏷️' },
+    { label: 'Import Contacts', href: 'shop.import-contacts.index', params: {}, pattern: '/app/contacts/import', icon: '📥' },
 ]
 
-const isChildActive = (pattern) => {
+const productLinks = [
+    { label: 'List Products', href: 'shop.products.index', params: {}, pattern: '/app/products', exactExclude: ['/app/products/create'], icon: '📦' },
+    { label: 'Add Product', href: 'shop.products.create', params: {}, pattern: '/app/products/create', icon: '➕' },
+]
+
+const isChildActive = (child) => {
+    const pattern = typeof child === 'string' ? child : child.pattern
+    const excludes = typeof child === 'object' ? child.exactExclude : null
+    if (Array.isArray(excludes) && excludes.some(prefix => page.url?.startsWith(prefix))) {
+        return false
+    }
+    if (typeof excludes === 'string' && page.url?.startsWith(excludes)) {
+        return false
+    }
     return page.url?.startsWith(pattern)
 }
 </script>
@@ -61,7 +78,7 @@ const isChildActive = (pattern) => {
                             :key="child.href"
                             :href="route(child.href)"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition"
-                            :class="isChildActive(child.pattern)
+                            :class="isChildActive(child)
                                 ? 'bg-indigo-600 text-white font-medium shadow-sm'
                                 : 'text-gray-700 hover:bg-gray-100 hover:text-indigo-600'"
                         >
@@ -91,7 +108,37 @@ const isChildActive = (pattern) => {
                             :key="child.href"
                             :href="route(child.href, child.params ?? {})"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition"
-                            :class="isChildActive(child.pattern)
+                            :class="isChildActive(child)
+                                ? 'bg-indigo-600 text-white font-medium shadow-sm'
+                                : 'text-gray-700 hover:bg-gray-100 hover:text-indigo-600'"
+                        >
+                            <span>{{ child.icon }}</span>
+                            <span>{{ child.label }}</span>
+                        </Link>
+                    </div>
+                </div>
+
+                <!-- Products Section -->
+                <div>
+                    <button
+                        type="button"
+                        @click="toggleSubmenu('products')"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-900 font-semibold text-sm hover:bg-indigo-50 transition"
+                    >
+                        <span class="flex items-center gap-2.5">
+                            <span class="text-base">📦</span>
+                            <span>Products</span>
+                        </span>
+                        <span class="text-xs text-gray-500">{{ openSubmenus.products ? '▾' : '▸' }}</span>
+                    </button>
+
+                    <div v-show="openSubmenus.products" class="mt-2 pl-3 pr-1 space-y-1">
+                        <Link
+                            v-for="child in productLinks"
+                            :key="child.href"
+                            :href="route(child.href, child.params ?? {})"
+                            class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition"
+                            :class="isChildActive(child)
                                 ? 'bg-indigo-600 text-white font-medium shadow-sm'
                                 : 'text-gray-700 hover:bg-gray-100 hover:text-indigo-600'"
                         >
