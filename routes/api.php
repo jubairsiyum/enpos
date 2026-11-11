@@ -64,6 +64,8 @@ Route::prefix('v1')->group(function () {
             Route::apiResource('sales-commission-agents', \App\Http\Controllers\Shop\SalesCommissionAgentController::class);
 
             // Contacts
+            Route::post('contacts/{id}/restore',      [\App\Http\Controllers\Shop\ContactController::class, 'restore']);
+            Route::delete('contacts/{id}/force-delete', [\App\Http\Controllers\Shop\ContactController::class, 'forceDelete']);
             Route::apiResource('contacts', \App\Http\Controllers\Shop\ContactController::class);
 
             // Products

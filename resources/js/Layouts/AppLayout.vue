@@ -8,6 +8,7 @@ const business = computed(() => page.props.auth?.business)
 
 const openSubmenus = ref({
     user_management: true,
+    contact: false,
 })
 
 const toggleSubmenu = (module) => {
@@ -18,6 +19,10 @@ const userManagementLinks = [
     { label: 'Users', href: 'shop.users.index', pattern: '/app/users', icon: '👤' },
     { label: 'Roles', href: 'shop.roles.index', pattern: '/app/roles', icon: '🛡️' },
     { label: 'Sales Commission Agent', href: 'shop.sales-commission-agents.index', pattern: '/app/sales-commission-agents', icon: '💼' },
+]
+
+const contactLinks = [
+    { label: 'Suppliers', href: 'shop.contacts.index', params: { type: 'supplier' }, pattern: '/app/contacts', icon: '🏭' },
 ]
 
 const isChildActive = (pattern) => {
@@ -55,6 +60,36 @@ const isChildActive = (pattern) => {
                             v-for="child in userManagementLinks"
                             :key="child.href"
                             :href="route(child.href)"
+                            class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition"
+                            :class="isChildActive(child.pattern)
+                                ? 'bg-indigo-600 text-white font-medium shadow-sm'
+                                : 'text-gray-700 hover:bg-gray-100 hover:text-indigo-600'"
+                        >
+                            <span>{{ child.icon }}</span>
+                            <span>{{ child.label }}</span>
+                        </Link>
+                    </div>
+                </div>
+
+                <!-- Contact Section -->
+                <div>
+                    <button
+                        type="button"
+                        @click="toggleSubmenu('contact')"
+                        class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-indigo-900 font-semibold text-sm hover:bg-indigo-50 transition"
+                    >
+                        <span class="flex items-center gap-2.5">
+                            <span class="text-base">📋</span>
+                            <span>Contact</span>
+                        </span>
+                        <span class="text-xs text-gray-500">{{ openSubmenus.contact ? '▾' : '▸' }}</span>
+                    </button>
+
+                    <div v-show="openSubmenus.contact" class="mt-2 pl-3 pr-1 space-y-1">
+                        <Link
+                            v-for="child in contactLinks"
+                            :key="child.href"
+                            :href="route(child.href, child.params ?? {})"
                             class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition"
                             :class="isChildActive(child.pattern)
                                 ? 'bg-indigo-600 text-white font-medium shadow-sm'

@@ -55,6 +55,12 @@ Route::prefix('app')
         Route::resource('roles', \App\Http\Controllers\Shop\RoleController::class);
         Route::resource('sales-commission-agents', \App\Http\Controllers\Shop\SalesCommissionAgentController::class);
 
+        // Contacts (Suppliers / Customers)
+        Route::post('contacts/{id}/restore', [\App\Http\Controllers\Shop\ContactController::class, 'restore'])->name('contacts.restore');
+        Route::delete('contacts/{id}/force-delete', [\App\Http\Controllers\Shop\ContactController::class, 'forceDelete'])->name('contacts.force-delete');
+        Route::resource('contacts', \App\Http\Controllers\Shop\ContactController::class)
+            ->only(['index', 'store', 'show', 'update', 'destroy']);
+
         // Remaining routes will be added per module
         Route::get('/{any}', fn () => Inertia::render('Shop/Dashboard'))
             ->where('any', '.*')
