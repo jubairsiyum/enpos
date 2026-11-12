@@ -87,11 +87,21 @@ Route::prefix('v1')->group(function () {
             Route::post('import-contacts', [\App\Http\Controllers\Shop\ImportContactController::class, 'store']);
             Route::get('import-contacts/template', [\App\Http\Controllers\Shop\ImportContactController::class, 'downloadTemplate']);
 
-            // Products (List Products & Add Product)
+            // Products (List Products, Add Product, Update Price, Print Labels)
             Route::get('products/add-options', [\App\Http\Controllers\Shop\AddProductController::class, 'formOptions']);
             Route::post('products/add', [\App\Http\Controllers\Shop\AddProductController::class, 'store']);
             Route::post('products/quick-units', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreUnit']);
             Route::post('products/quick-brands', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreBrand']);
+            Route::get('products/update-price', [\App\Http\Controllers\Shop\UpdatePriceController::class, 'index']);
+            Route::get('products/update-price/export', [\App\Http\Controllers\Shop\UpdatePriceController::class, 'export']);
+            Route::post('products/update-price/import', [\App\Http\Controllers\Shop\UpdatePriceController::class, 'import']);
+            Route::get('products/print-labels', [\App\Http\Controllers\Shop\PrintLabelController::class, 'index']);
+            Route::get('products/print-labels/search', [\App\Http\Controllers\Shop\PrintLabelController::class, 'search']);
+            Route::post('products/print-labels/preview', [\App\Http\Controllers\Shop\PrintLabelController::class, 'preview']);
+            Route::post('products/print-labels/preview-pdf', [\App\Http\Controllers\Shop\PrintLabelController::class, 'previewPdf']);
+            Route::post('products/print-labels/barcode-settings', [\App\Http\Controllers\Shop\PrintLabelController::class, 'storeBarcodeSetting']);
+            Route::match(['put', 'patch'], 'products/print-labels/barcode-settings/{barcodeSetting}', [\App\Http\Controllers\Shop\PrintLabelController::class, 'updateBarcodeSetting']);
+            Route::delete('products/print-labels/barcode-settings/{barcodeSetting}', [\App\Http\Controllers\Shop\PrintLabelController::class, 'destroyBarcodeSetting']);
             Route::get('products/stock-report', [\App\Http\Controllers\Shop\ProductController::class, 'stockReport']);
             Route::post('products/bulk-delete', [\App\Http\Controllers\Shop\ProductController::class, 'bulkDestroy']);
             Route::post('products/bulk-location', [\App\Http\Controllers\Shop\ProductController::class, 'bulkLocation']);
@@ -105,6 +115,10 @@ Route::prefix('v1')->group(function () {
             Route::get('products/{product}/stock-history', [\App\Http\Controllers\Shop\ProductController::class, 'stockHistory']);
             Route::get('products/{product}/labels', [\App\Http\Controllers\Shop\ProductController::class, 'labels']);
             Route::apiResource('products', \App\Http\Controllers\Shop\ProductController::class);
+
+            // Variations (under Products)
+            Route::get('variations/export', [\App\Http\Controllers\Shop\VariationController::class, 'export']);
+            Route::apiResource('variations', \App\Http\Controllers\Shop\VariationController::class);
 
             // Purchases
             Route::apiResource('purchases', \App\Http\Controllers\Shop\PurchaseController::class);

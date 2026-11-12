@@ -7,9 +7,9 @@ const user = computed(() => page.props.auth?.user)
 const business = computed(() => page.props.auth?.business)
 
 const openSubmenus = ref({
-    user_management: ! page.url?.startsWith('/app/contacts') && ! page.url?.startsWith('/app/products'),
+    user_management: ! page.url?.startsWith('/app/contacts') && ! page.url?.startsWith('/app/products') && ! page.url?.startsWith('/app/variations'),
     contact: page.url?.startsWith('/app/contacts') ?? false,
-    products: page.url?.startsWith('/app/products') ?? false,
+    products: (page.url?.startsWith('/app/products') || page.url?.startsWith('/app/variations')) ?? false,
 })
 
 const toggleSubmenu = (module) => {
@@ -30,8 +30,11 @@ const contactLinks = [
 ]
 
 const productLinks = [
-    { label: 'List Products', href: 'shop.products.index', params: {}, pattern: '/app/products', exactExclude: ['/app/products/create'], icon: '📦' },
+    { label: 'List Products', href: 'shop.products.index', params: {}, pattern: '/app/products', exactExclude: ['/app/products/create', '/app/products/update-price', '/app/products/print-labels'], icon: '📦' },
     { label: 'Add Product', href: 'shop.products.create', params: {}, pattern: '/app/products/create', icon: '➕' },
+    { label: 'Update Price', href: 'shop.products.update-price.index', params: {}, pattern: '/app/products/update-price', icon: '💲' },
+    { label: 'Print Labels', href: 'shop.products.print-labels.index', params: {}, pattern: '/app/products/print-labels', icon: '🏷️' },
+    { label: 'Variations', href: 'shop.variations.index', params: {}, pattern: '/app/variations', icon: '🧬' },
 ]
 
 const isChildActive = (child) => {

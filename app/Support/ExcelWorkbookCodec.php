@@ -826,4 +826,157 @@ class ExcelWorkbookCodec
 
         return $index - 1;
     }
+
+    /**
+     * Parse rows from raw uploaded file bytes (.xls, .xlsx, SpreadsheetML, HTML table, or CSV).
+     *
+     * @return array<int, array<int, string|null>>
+     */
+    public function parseUploadedRows(string $contents, string $extension): array
+    {
+        if (trim($contents) === '') {
+            return [];
+        }
+
+        if ($this->isBinaryXls($contents)) {
+            return $this->parseBinaryXls($contents);
+        }
+
+        if ($this->isXlsx($contents) || $extension === 'xlsx') {
+            return $this->parseXlsx($contents);
+        }
+
+        if ($extension === 'xls' && str_contains($contents, '<Workbook')) {
+            return $this->parseSpreadsheetMl($contents);
+        }
+
+        if ($extension === 'xls' && stripos($contents, '<table') !== false) {
+            return $this->parseHtmlTable($contents);
+        }
+
+        return $this->parseCsv($contents);
+    }
+
+    /**
+     * Build a UTF-8 CSV string with BOM for Excel compatibility.
+     *
+     * @param  array<int, array<int, string|int|float|null>>  $rows
+     */
+    public function buildCsv(array $rows): string
+    {
+        $handle = fopen('php://temp', 'r+');
+        if ($handle === false) {
+            throw new RuntimeException('Unable to open temporary stream for CSV export.');
+        }
+
+        fwrite($handle, "\xEF\xBB\xBF");
+        foreach ($rows as $row) {
+            fputcsv($handle, array_map(fn (mixed $cell): string => $cell === null ? '' : (string) $cell, $row));
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return $csv === false ? '' : $csv;
+    }
+
+    /**
+     * @return array<int, array<int, string|null>>
+     */
+    public function parseCsv(string $contents): array
+    {
+        if (str_starts_with($contents, "\xEF\xBB\xBF")) {
+            $contents = substr($contents, 3);
+        }
+
+        $handle = fopen('php://temp', 'r+');
+        if ($handle === false) {
+            return [];
+        }
+
+        fwrite($handle, $contents);
+        rewind($handle);
+
+        $rows = [];
+        while (($row = fgetcsv($handle)) !== false) {
+            $rows[] = $row;
+        }
+        fclose($handle);
+
+        return $rows;
+    }
+
+    /**
+     * @return array<int, array<int, string|null>>
+     */
+    private function parseSpreadsheetMl(string $xmlContent): array
+    {
+        $previous = libxml_use_internal_errors(true);
+        $xml = simplexml_load_string($xmlContent);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+
+        if ($xml === false) {
+            throw new RuntimeException('Unable to parse the .xls XML file.');
+        }
+
+        $ssNs = 'urn:schemas-microsoft-com:office:spreadsheet';
+        $xml->registerXPathNamespace('ss', $ssNs);
+        $rowNodes = $xml->xpath('//ss:Worksheet/ss:Table/ss:Row') ?: $xml->xpath('//Worksheet/Table/Row');
+
+        if (! is_array($rowNodes)) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ($rowNodes as $rowNode) {
+            $row = [];
+            $colIndex = 0;
+
+            $cells = $rowNode->children($ssNs)->Cell;
+            if (count($cells) === 0) {
+                $cells = $rowNode->Cell;
+            }
+
+            foreach ($cells as $cell) {
+                $ssAttrs = $cell->attributes($ssNs);
+                if (isset($ssAttrs['Index'])) {
+                    $colIndex = ((int) $ssAttrs['Index']) - 1;
+                }
+
+                $dataNode = $cell->children($ssNs)->Data ?? $cell->Data;
+                $row[$colIndex] = trim((string) $dataNode);
+                $colIndex++;
+            }
+
+            $rows[] = $row;
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return array<int, array<int, string|null>>
+     */
+    private function parseHtmlTable(string $html): array
+    {
+        $dom = new \DOMDocument();
+        @$dom->loadHTML($html);
+        $rows = [];
+
+        foreach ($dom->getElementsByTagName('tr') as $tr) {
+            $row = [];
+            foreach ($tr->childNodes as $cell) {
+                if (in_array(strtolower($cell->nodeName), ['td', 'th'], true)) {
+                    $row[] = trim($cell->textContent);
+                }
+            }
+            if (! empty($row)) {
+                $rows[] = $row;
+            }
+        }
+
+        return $rows;
+    }
 }

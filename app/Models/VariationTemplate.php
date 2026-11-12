@@ -20,4 +20,9 @@ class VariationTemplate extends Model
     {
         return $this->hasMany(VariationValueTemplate::class, 'variation_template_id');
     }
+
+    public function variations(): HasMany
+    {
+        return $this->hasMany(Variation::class, 'variation_template_id');
+    }
 }

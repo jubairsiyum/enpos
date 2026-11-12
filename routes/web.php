@@ -86,10 +86,20 @@ Route::prefix('app')
         Route::resource('contacts', \App\Http\Controllers\Shop\ContactController::class)
             ->only(['index', 'store', 'show', 'update', 'destroy']);
 
-        // Products (List Products & Add Product)
+        // Products (List Products, Add Product, Update Price, Print Labels)
         Route::get('products/create', [\App\Http\Controllers\Shop\AddProductController::class, 'create'])->name('products.create');
         Route::post('products/quick-units', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreUnit'])->name('products.quick-units');
         Route::post('products/quick-brands', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreBrand'])->name('products.quick-brands');
+        Route::get('products/update-price', [\App\Http\Controllers\Shop\UpdatePriceController::class, 'index'])->name('products.update-price.index');
+        Route::get('products/update-price/export', [\App\Http\Controllers\Shop\UpdatePriceController::class, 'export'])->name('products.update-price.export');
+        Route::post('products/update-price/import', [\App\Http\Controllers\Shop\UpdatePriceController::class, 'import'])->name('products.update-price.import');
+        Route::get('products/print-labels', [\App\Http\Controllers\Shop\PrintLabelController::class, 'index'])->name('products.print-labels.index');
+        Route::get('products/print-labels/search', [\App\Http\Controllers\Shop\PrintLabelController::class, 'search'])->name('products.print-labels.search');
+        Route::post('products/print-labels/preview', [\App\Http\Controllers\Shop\PrintLabelController::class, 'preview'])->name('products.print-labels.preview');
+        Route::post('products/print-labels/preview-pdf', [\App\Http\Controllers\Shop\PrintLabelController::class, 'previewPdf'])->name('products.print-labels.preview-pdf');
+        Route::post('products/print-labels/barcode-settings', [\App\Http\Controllers\Shop\PrintLabelController::class, 'storeBarcodeSetting'])->name('products.print-labels.barcode-settings.store');
+        Route::match(['put', 'patch'], 'products/print-labels/barcode-settings/{barcodeSetting}', [\App\Http\Controllers\Shop\PrintLabelController::class, 'updateBarcodeSetting'])->name('products.print-labels.barcode-settings.update');
+        Route::delete('products/print-labels/barcode-settings/{barcodeSetting}', [\App\Http\Controllers\Shop\PrintLabelController::class, 'destroyBarcodeSetting'])->name('products.print-labels.barcode-settings.destroy');
         Route::post('products/bulk-delete', [\App\Http\Controllers\Shop\ProductController::class, 'bulkDestroy'])->name('products.bulk-delete');
         Route::post('products/bulk-location', [\App\Http\Controllers\Shop\ProductController::class, 'bulkLocation'])->name('products.bulk-location');
         Route::post('products/bulk-status', [\App\Http\Controllers\Shop\ProductController::class, 'bulkToggleStatus'])->name('products.bulk-status');
@@ -107,6 +117,11 @@ Route::prefix('app')
         Route::get('products/{product}/edit', [\App\Http\Controllers\Shop\ProductController::class, 'edit'])->name('products.edit');
         Route::match(['put', 'patch'], 'products/{product}', [\App\Http\Controllers\Shop\ProductController::class, 'update'])->name('products.update');
         Route::delete('products/{product}', [\App\Http\Controllers\Shop\ProductController::class, 'destroy'])->name('products.destroy');
+
+        // Variations (under Products)
+        Route::get('variations/export', [\App\Http\Controllers\Shop\VariationController::class, 'export'])->name('variations.export');
+        Route::resource('variations', \App\Http\Controllers\Shop\VariationController::class)
+            ->only(['index', 'store', 'show', 'update', 'destroy']);
 
         // Remaining routes will be added per module
         Route::get('/{any}', fn () => Inertia::render('Shop/Dashboard'))
