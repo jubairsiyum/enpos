@@ -86,7 +86,10 @@ Route::prefix('app')
         Route::resource('contacts', \App\Http\Controllers\Shop\ContactController::class)
             ->only(['index', 'store', 'show', 'update', 'destroy']);
 
-        // Products (List Products, Add Product, Update Price, Print Labels)
+        // Products (List Products, Add Product, Update Price, Print Labels, Import Products)
+        Route::get('products/import', [\App\Http\Controllers\Shop\ImportProductController::class, 'index'])->name('products.import.index');
+        Route::post('products/import', [\App\Http\Controllers\Shop\ImportProductController::class, 'store'])->name('products.import.store');
+        Route::get('products/import/template', [\App\Http\Controllers\Shop\ImportProductController::class, 'downloadTemplate'])->name('products.import.template');
         Route::get('products/create', [\App\Http\Controllers\Shop\AddProductController::class, 'create'])->name('products.create');
         Route::post('products/quick-units', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreUnit'])->name('products.quick-units');
         Route::post('products/quick-brands', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreBrand'])->name('products.quick-brands');

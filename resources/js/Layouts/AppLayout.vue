@@ -30,10 +30,11 @@ const contactLinks = [
 ]
 
 const productLinks = [
-    { label: 'List Products', href: 'shop.products.index', params: {}, pattern: '/app/products', exactExclude: ['/app/products/create', '/app/products/update-price', '/app/products/print-labels'], icon: '📦' },
+    { label: 'List Products', href: 'shop.products.index', params: {}, pattern: '/app/products', exactExclude: ['/app/products/create', '/app/products/update-price', '/app/products/print-labels', '/app/products/import'], icon: '📦' },
     { label: 'Add Product', href: 'shop.products.create', params: {}, pattern: '/app/products/create', icon: '➕' },
     { label: 'Update Price', href: 'shop.products.update-price.index', params: {}, pattern: '/app/products/update-price', icon: '💲' },
     { label: 'Print Labels', href: 'shop.products.print-labels.index', params: {}, pattern: '/app/products/print-labels', icon: '🏷️' },
+    { label: 'Import Products', href: 'shop.products.import.index', params: {}, pattern: '/app/products/import', icon: '📥' },
     { label: 'Variations', href: 'shop.variations.index', params: {}, pattern: '/app/variations', icon: '🧬' },
 ]
 

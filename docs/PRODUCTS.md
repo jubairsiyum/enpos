@@ -4,12 +4,13 @@
 
 The **Products** module manages the multi-tenant product catalog, pricing (tax-exclusive & tax-inclusive), variations, combo bundles, business location assignments, opening stock, stock movement history, and stock valuation reports for each shop in enPOS.
 
-It is organized into five main sections under **Products**:
+It is organized into six main sections under **Products**:
 1. **List Products** (`/app/products` & `/api/v1/shop/products`) — Manage all products (`Single`, `Variable`, `Combo`), multi-criteria filters, `Stock Report` tab, row actions (`Labels`, `View`, `Edit`, `Delete`, `Add or edit opening stock`, `Product stock history`, `Duplicate Product`), and bulk operations (`Delete Selected`, `Add to location`, `Remove from location`, `Deactivate Selected`, `WooCommerce Sync`).
 2. **Add Product** (`/app/products/create` & `/api/v1/shop/products/add`) — Dedicated `AddProductController` and form (`Shop/Products/Create.vue`) supporting Single, Variable, and Combo products, inline quick-create modals for Units & Brands, image & brochure uploads, automatic tax/margin calculation, and `Save & Add Opening Stock` / `Save And Add Another` / `Save` actions. Clicking **+ Add** on **List Products** opens this same **Add Product** form.
 3. **Update Price** (`/app/products/update-price` & `/api/v1/shop/products/update-price`) — `UpdatePriceController` & `ProductPriceUpdate` model for exporting all product variation prices and Selling Price Group prices (`.xls` / `.csv`), and importing updated prices with strict header/product/SKU validation and audit logging.
 4. **Print Labels** (`/app/products/print-labels` & `/api/v1/shop/products/print-labels`) — `PrintLabelController`, `BarcodeSetting`, `PrintLabelJob`, and `LabelPdfCodec` supporting product/variation search, configurable label fields & font sizes, Selling Price Group / `Inc. tax` vs `Exc. tax` pricing, 6 default barcode sheet/roll presets (plus custom barcode settings CRUD), HTML preview, and PDF download.
-5. **Variations** (`/app/variations` & `/api/v1/shop/variations`) — `VariationController` managing `VariationTemplate` & `VariationValueTemplate` (`Size`, `Color`, etc.), search, sorting, CSV/Excel export, and in-use deletion protection.
+5. **Import Products** (`/app/products/import` & `/api/v1/shop/products/import`) — `ImportProductController` & `ImportProduct` model for bulk importing `single` and `variable` products via `.xls`, `.xlsx`, or `.csv` using the downloadable 37-column `.xls` template, auto-creating missing Brands/Categories/Sub-categories/Variations, and applying initial opening stock.
+6. **Variations** (`/app/variations` & `/api/v1/shop/variations`) — `VariationController` managing `VariationTemplate` & `VariationValueTemplate` (`Size`, `Color`, etc.), search, sorting, CSV/Excel export, and in-use deletion protection.
 
 ---
 
@@ -34,9 +35,10 @@ It is organized into five main sections under **Products**:
     - `App\Http\Controllers\Shop\AddProductController` — Add Product form page (`create`), API dropdown options (`formOptions`), product creation (`store`), and inline quick-add endpoints (`quickStoreUnit`, `quickStoreBrand`).
     - `App\Http\Controllers\Shop\UpdatePriceController` — Instructions & update history (`index`), export product prices (`.xls` / `.csv`), and import updated prices (`import`).
     - `App\Http\Controllers\Shop\PrintLabelController` — Print Labels options & default barcode presets (`index`), product search (`search`), JSON/HTML preview (`preview`), PDF download (`previewPdf`), and Barcode Settings CRUD.
+    - `App\Http\Controllers\Shop\ImportProductController` — Import Products instructions/upload page & API list (`index`), `.xls` template download (`downloadTemplate`), and bulk import (`store`).
     - `App\Http\Controllers\Shop\VariationController` — Variations CRUD (`index`, `store`, `show`, `update`, `destroy`) and CSV/XLS export (`export`).
   - **Additional Models & Support**:
-    - `App\Models\ProductPriceUpdate`, `App\Models\BarcodeSetting`, `App\Models\PrintLabelJob`, `App\Support\LabelPdfCodec`.
+    - `App\Models\ProductPriceUpdate`, `App\Models\BarcodeSetting`, `App\Models\PrintLabelJob`, `App\Models\ImportProduct`, `App\Support\LabelPdfCodec`, `App\Support\ExcelWorkbookCodec`.
 
 ---
 
@@ -45,6 +47,7 @@ It is organized into five main sections under **Products**:
 1. `2026_11_08_200004_create_catalog_tables.php` — Base `units`, `categories`, `brands`, `warranties`, `selling_price_groups`, `tax_rates`, `products`, `variations`, `variation_location_details`, `variation_group_prices`, and `combo_product_components`.
 2. `2026_11_11_180000_add_product_module_fields_and_tables.php` — Extends `products` and `variations`, and adds `product_locations`, `variation_templates`, and `variation_value_templates`.
 3. `2026_11_12_100000_create_product_price_updates_and_print_labels_tables.php` — Adds `product_price_updates` (price import/update audit logs) and `print_label_jobs` (label print/preview batch history).
+4. `2026_11_12_150000_create_import_products_table.php` — Adds `import_products` storing the 37-column import audit rows linked to `products.id` (`product_id`) and `users.id` (`imported_by`).
 
 ### 3.1 `products` Additions
 | Column | Type | Description |
@@ -129,6 +132,13 @@ All Inertia web routes are prefixed with `/app` and protected by `['auth', 'busi
 | `PUT/PATCH` | `/variations/{variation}` | Update variation name and sync values (blocks removing values used by products) |
 | `DELETE` | `/variations/{variation}` | Delete variation template (returns `422` if used by existing products) |
 
+### 4.7 Import Products (`ImportProductController`)
+| Method | API Endpoint | Web Endpoint | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/shop/products/import` | `/app/products/import` | API: Paginated list of imported product audit records; Web: Instructions & upload UI |
+| `GET` | `/api/v1/shop/products/import/template` | `/app/products/import/template` | Download genuine binary `.xls` template with the 37 required column headers |
+| `POST` | `/api/v1/shop/products/import` | `POST /app/products/import` | Multipart `file` upload (`.xls`, `.xlsx`, `.csv`) validating all 37 columns, creating `single` or `variable` products, auto-creating Brands/Categories/Sub-categories/Variation templates, and applying Opening Stock |
+
 **Supported `GET /products` Query Filters:**
 - `search` — Matches product `name`, `sku`, or variation `sku`
 - `type` — `single` | `variable` | `combo`
@@ -158,6 +168,7 @@ Both existing and new sections are registered in the master Postman collection *
 - `12. Update Price (Products)` — 4 requests covering info/history, `.xls` export, `.csv` export, and price import upload.
 - `13. Print Labels (Products)` — 7 requests covering options/presets, product search, preview JSON/HTML, preview PDF, and barcode settings CRUD.
 - `14. Variations (Products)` — 6 requests covering list, CSV export, create, show, update, and delete.
+- `15. Import Products (Products)` — 3 requests covering `.xls` template download, multipart file import (`.xls`, `.xlsx`, or `.csv`), and paginated imported products list.
 
 Sync anytime via:
 ```bash

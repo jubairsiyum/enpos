@@ -87,7 +87,10 @@ Route::prefix('v1')->group(function () {
             Route::post('import-contacts', [\App\Http\Controllers\Shop\ImportContactController::class, 'store']);
             Route::get('import-contacts/template', [\App\Http\Controllers\Shop\ImportContactController::class, 'downloadTemplate']);
 
-            // Products (List Products, Add Product, Update Price, Print Labels)
+            // Products (List Products, Add Product, Update Price, Print Labels, Import Products)
+            Route::get('products/import', [\App\Http\Controllers\Shop\ImportProductController::class, 'index']);
+            Route::post('products/import', [\App\Http\Controllers\Shop\ImportProductController::class, 'store']);
+            Route::get('products/import/template', [\App\Http\Controllers\Shop\ImportProductController::class, 'downloadTemplate']);
             Route::get('products/add-options', [\App\Http\Controllers\Shop\AddProductController::class, 'formOptions']);
             Route::post('products/add', [\App\Http\Controllers\Shop\AddProductController::class, 'store']);
             Route::post('products/quick-units', [\App\Http\Controllers\Shop\AddProductController::class, 'quickStoreUnit']);
