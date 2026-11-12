@@ -150,7 +150,7 @@ const isChildActive = (child) => {
     <div class="min-h-screen bg-gray-50 flex">
         <!-- Sidebar -->
         <aside
-            class="w-64 flex-shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-y-auto"
+            class="w-64 shrink-0 bg-white border-r border-gray-200 flex flex-col overflow-y-auto"
         >
             <!-- Brand -->
             <div
